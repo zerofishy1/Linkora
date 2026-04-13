@@ -1,0 +1,38 @@
+{
+  "name": "linkora",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Linkora — workspace-платформа для команд: задачи, чаты, документы, календарь.",
+  "scripts": {
+    "sync:public": "node ./tools/sync-public-docs.mjs",
+    "dev": "vite",
+    "build": "npm run sync:public && tsc --noEmit && vite build",
+    "preview": "npm run sync:public && vite preview",
+    "audit:bitrix": "node ./tools/bitrix-audit.mjs",
+    "audit:bitrix:clickmap": "node ./tools/bitrix-click-map.mjs",
+    "audit:local": "npm run build && node ./tools/local-smoke.mjs",
+    "audit:buttons": "npm run build && node ./tools/button-coverage.mjs",
+    "serve": "vite --host 127.0.0.1 --port 4173",
+    "serve:legacy": "python3 -m http.server 4173",
+    "test": "npm run build && node ./tools/local-smoke.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.101.1",
+    "@tanstack/react-query": "^5.96.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.14.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "playwright": "^1.59.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.4"
+  }
+}

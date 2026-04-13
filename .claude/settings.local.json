@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(lsof -ti:4173 -ti:4174)",
+      "Bash(xargs kill:*)",
+      "Bash(npm run:*)",
+      "Bash(lsof -ti:4173)"
+    ]
+  }
+}

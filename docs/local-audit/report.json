@@ -1,0 +1,179 @@
+{
+  "generatedAt": "2026-04-10T09:30:10.872Z",
+  "baseUrl": "http://127.0.0.1:4173",
+  "routes": [
+    {
+      "route": "messenger",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/messenger",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "feed",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/feed",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "collabs",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/collabs",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "calendar",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/calendar",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "documents",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/documents",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "boards",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/boards",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "drive",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/drive",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "mail",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/mail",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "groups",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/groups",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "tasks",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/tasks",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "crm",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/crm",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "marketing",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/marketing",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "bi",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/bi",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "company",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/company",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "automation",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/automation",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "market",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/market",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "devops",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/devops",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "mcp",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/mcp",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    },
+    {
+      "route": "telegram",
+      "pageTitle": "Orbit24 Personal",
+      "url": "http://127.0.0.1:4173/telegram",
+      "overflow": {
+        "pageOverflow": 0,
+        "offenders": []
+      }
+    }
+  ],
+  "consoleErrors": [],
+  "pageErrors": []
+}

@@ -1,0 +1,433 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════
+//  Auth & Profile
+// ═══════════════════════════════════════════
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  initials  String
+  jobTitle  String   @default("Сотрудник")
+  tag       String   @default("")
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships          WorkspaceMembership[]
+  createdInviteTokens  WorkspaceInviteToken[]
+  tasks                Task[]
+  createdTasks         Task[]        @relation("TaskCreator")
+  events               Event[]
+  feedPosts            FeedPost[]
+  chatThreads          ChatThread[]
+  chatMessages         ChatMessage[]
+  mailThreads          MailThread[]
+  documents            Document[]
+  ownedGroups          Group[]       @relation("GroupOwner")
+  groupMembers         GroupMember[]
+  groupPosts           GroupPost[]
+  settings             UserSettings?
+}
+
+model UserSettings {
+  id           String @id @default(uuid())
+  userId       String @unique
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme        String @default("light")
+  locale       String @default("ru")
+  sidebarState String @default("{}")
+  defaultRoute String @default("messenger")
+}
+
+// ═══════════════════════════════════════════
+//  Workspace & Multi-tenancy
+// ═══════════════════════════════════════════
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships  WorkspaceMembership[]
+  inviteTokens WorkspaceInviteToken[]
+  tasks        Task[]
+  events       Event[]
+  feedPosts    FeedPost[]
+  chatThreads  ChatThread[]
+  mailThreads  MailThread[]
+  documents    Document[]
+  groups       Group[]
+  people       Person[]
+  files        UploadedFile[]
+}
+
+model WorkspaceMembership {
+  id   String @id @default(uuid())
+  role String @default("member") // admin | member | viewer
+
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, workspaceId])
+}
+
+model WorkspaceInviteToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  role       String   @default("member") // role assigned on join
+  expiresAt  DateTime
+  usageLimit Int      @default(0) // 0 = unlimited
+  usageCount Int      @default(0)
+  isActive   Boolean  @default(true)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdById String
+  createdBy   User @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+//  Tasks
+// ═══════════════════════════════════════════
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String   @default("")
+  status      String   @default("active")
+  priority    String   @default("medium")
+  deadline    String   @default("")
+  bucket      String   @default("today")
+  planBucket  String   @default("unscheduled")
+  kanbanStage String   @default("new")     // new | in_progress | done | on_review
+  tags        String   @default("")
+  project     String   @default("")
+  projectType String   @default("")
+  comments    Int      @default(0)
+  startDay    Int      @default(0)
+  endDay      Int      @default(0)
+  doneDay     Int      @default(0)
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  creatorId   String
+  creator     User      @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee    String    @default("")
+
+  groupId     String?
+  group       Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  chatThreadId String?     @unique
+  chatThread   ChatThread? @relation(fields: [chatThreadId], references: [id])
+  files        TaskFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskFile {
+  id        String   @id @default(uuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  filename  String
+  path      String
+  size      Int      @default(0)
+  source    String   @default("upload")
+  createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+//  Calendar Events
+// ═══════════════════════════════════════════
+
+model Event {
+  id   String @id @default(uuid())
+  title String
+  date  String
+  time  String
+  type  String @default("meeting")
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  Feed
+// ═══════════════════════════════════════════
+
+model FeedPost {
+  id     String @id @default(uuid())
+  title  String
+  body   String
+  tag    String @default("")
+  author String
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  Chats
+// ═══════════════════════════════════════════
+
+model ChatThread {
+  id          String @id @default(uuid())
+  title       String
+  tab         String @default("chat")
+  counterpart String @default("")
+  snippet     String @default("")
+  focus       String @default("")
+  unread      Int    @default(0)
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  messages ChatMessage[]
+  task     Task?
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+model ChatMessage {
+  id         String  @id @default(uuid())
+  body       String
+  isMine     Boolean @default(false)
+  authorName String
+
+  threadId String
+  thread   ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?      @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+//  Mail
+// ═══════════════════════════════════════════
+
+model MailThread {
+  id         String  @id @default(uuid())
+  fromAddr   String
+  subject    String
+  preview    String  @default("")
+  body       String  @default("")
+  unread     Boolean @default(true)
+  receivedAt String
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+//  Documents / Boards / Drive files
+// ═══════════════════════════════════════════
+
+model Document {
+  id      String @id @default(uuid())
+  kind    String @default("document")
+  title   String
+  summary String @default("")
+  meta    String @default("")
+
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  Groups
+// ═══════════════════════════════════════════
+
+model Group {
+  id      String @id @default(uuid())
+  title   String
+  summary     String @default("")
+  description String @default("")
+  type        String @default("group")        // group | project
+  privacy     String @default("OPEN")         // OPEN | CLOSED
+  avatarUrl   String?
+  isArchived  Boolean @default(false)
+
+  // Project settings
+  defaultLanding String @default("tasks")     // tasks | feed | calendar | disk
+  enabledTools   String @default("tasks,feed,calendar,disk,chat")
+  menuOrder      String @default("")          // custom order JSON
+  dateStart      String @default("")
+  dateEnd        String @default("")
+  efficiency     Int    @default(0)           // project efficiency 0-100
+
+  ownerId     String
+  owner       User      @relation("GroupOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  members GroupMember[]
+  posts   GroupPost[]
+  tasks   Task[]
+  events  GroupEvent[]
+  files   GroupFile[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  lastActivityAt DateTime @default(now())
+}
+
+model GroupMember {
+  id   String @id @default(uuid())
+  role String @default("member")
+
+  groupId String
+  group   Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  joinedAt DateTime @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model GroupPost {
+  id       String @id @default(uuid())
+  title    String @default("")
+  body     String
+  postType String @default("message")   // message | poll | file | gratitude
+  metadata String @default("")          // JSON: poll options, file refs, recipient, etc.
+
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  groupId     String
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  workspaceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  Group Events (calendar)
+// ═══════════════════════════════════════════
+
+model GroupEvent {
+  id          String @id @default(uuid())
+  title       String
+  description String @default("")
+  date        String                   // YYYY-MM-DD
+  time        String @default("")      // HH:mm
+  endTime     String @default("")      // HH:mm
+  type        String @default("event") // event | meeting | deadline | reminder
+
+  groupId     String
+  group       Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creatorId   String
+  workspaceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  Group Files (disk)
+// ═══════════════════════════════════════════
+
+model GroupFile {
+  id          String  @id @default(uuid())
+  filename    String
+  storedName  String  @default("")
+  path        String  @default("")
+  mimeType    String  @default("")
+  size        Int     @default(0)
+  isFolder    Boolean @default(false)
+  isTrashed   Boolean @default(false)
+
+  parentId    String?                       // folder hierarchy
+  groupId     String
+  group       Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  uploaderId  String
+  workspaceId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  People (employee directory)
+// ═══════════════════════════════════════════
+
+model Person {
+  id    String @id @default(uuid())
+  name  String
+  role  String @default("")
+  state String @default("Офлайн")
+  focus String @default("")
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ═══════════════════════════════════════════
+//  File storage
+// ═══════════════════════════════════════════
+
+model UploadedFile {
+  id           String @id @default(uuid())
+  originalName String
+  storedName   String
+  mimeType     String @default("")
+  size         Int    @default(0)
+  path         String
+  uploaderId   String
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}

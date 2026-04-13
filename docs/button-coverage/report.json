@@ -1,0 +1,107 @@
+{
+  "generatedAt": "2026-04-10T09:29:55.692Z",
+  "baseUrl": "http://127.0.0.1:49559",
+  "routes": [
+    "messenger",
+    "feed",
+    "collabs",
+    "calendar",
+    "documents",
+    "boards",
+    "drive",
+    "mail",
+    "groups",
+    "tasks",
+    "crm",
+    "marketing",
+    "bi",
+    "company",
+    "automation",
+    "market",
+    "devops",
+    "mcp",
+    "telegram"
+  ],
+  "totalScenarios": 19,
+  "passedScenarios": 19,
+  "failedScenarios": 0,
+  "results": [
+    {
+      "name": "root_redirects_to_messenger",
+      "status": "passed"
+    },
+    {
+      "name": "sidebar_group_toggles_work",
+      "status": "passed"
+    },
+    {
+      "name": "sidebar_navigation_covers_all_routes",
+      "status": "passed"
+    },
+    {
+      "name": "service_nav_buttons_cover_sections",
+      "status": "passed"
+    },
+    {
+      "name": "utility_buttons_invite_market_help_work",
+      "status": "passed"
+    },
+    {
+      "name": "quick_rail_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "memory_button_opens_project_memory",
+      "status": "passed"
+    },
+    {
+      "name": "mobile_sidebar_toggle_and_overlay_work",
+      "status": "passed"
+    },
+    {
+      "name": "quick_capture_button_adds_feed_note",
+      "status": "passed"
+    },
+    {
+      "name": "messenger_tabs_all_work",
+      "status": "passed"
+    },
+    {
+      "name": "messenger_primary_button_creates_dialog",
+      "status": "passed"
+    },
+    {
+      "name": "messenger_send_message_button_works",
+      "status": "passed"
+    },
+    {
+      "name": "feed_form_submit_button_works",
+      "status": "passed"
+    },
+    {
+      "name": "calendar_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "documents_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "mail_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "tasks_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "crm_buttons_work",
+      "status": "passed"
+    },
+    {
+      "name": "route_create_buttons_work_across_modules",
+      "status": "passed"
+    }
+  ],
+  "inventoryPath": "/Users/hamidmusaev/Documents/Bitrix 2.0/docs/button-coverage/inventory.json"
+}
