@@ -20,15 +20,19 @@ import fileRoutes from "./routes/files";
 export function createApp() {
   const app = express();
 
-  // Allow both localhost and 127.0.0.1 (browsers treat them as different origins)
-  const allowedOrigins = [
-    config.frontendUrl,
-    config.frontendUrl.replace("localhost", "127.0.0.1"),
-    config.frontendUrl.replace("127.0.0.1", "localhost"),
-  ];
+  // Allow localhost/127.0.0.1 on any port during development
   app.use(cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin) return callback(null, true);
+      // Allow any localhost, 127.0.0.1, or local network origin in development
+      if (
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1") ||
+        origin.startsWith("https://localhost") ||
+        origin.startsWith("https://127.0.0.1") ||
+        origin.startsWith("http://192.168.") ||
+        origin === config.frontendUrl
+      ) {
         callback(null, true);
       } else {
         callback(null, false);

@@ -10,7 +10,8 @@
  *   const { tasks } = await api.tasks.list();
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+// Use the same hostname the browser used to open the page, but on port 3000
+const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:3000/api`;
 
 // ─── Token management ───
 

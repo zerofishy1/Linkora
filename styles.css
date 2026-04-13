@@ -2942,23 +2942,32 @@ body::after {
 
 .task-calendar-date {
   position: absolute;
-  top: 10px;
-  right: 12px;
-}
-
-.task-calendar-badge {
-  position: absolute;
   top: 8px;
-  right: 8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: #62b8e2;
+  right: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  z-index: 2;
+}
+.task-calendar-cell.selected .task-calendar-date {
+  background: var(--accent, #5b5fc7);
   color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  top: 5px;
+  right: 7px;
+}
+.task-cal-other .task-calendar-date {
+  color: #bbb;
+  font-weight: 400;
+}
+
+.task-calendar-badge {
+  display: none;
 }
 
 .task-calendar-event {
@@ -3059,8 +3068,335 @@ body::after {
   background: #ef7167;
 }
 
+/* ── Bitrix24-style task header bar ── */
+.task-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 0 0 4px;
+}
+
+.task-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.task-page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #333b4f;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.task-star {
+  color: #f5b731;
+  font-size: 18px;
+}
+
+.task-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: #bbd742;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.task-create-btn:hover {
+  background: #a9c438;
+}
+
+.task-create-arrow {
+  font-size: 10px;
+  margin-left: 2px;
+}
+
+.task-header-center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.task-role-pill {
+  border: 0;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #eef1f7;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-role-pill.is-active {
+  background: #d1ecf9;
+  color: #1e6fa3;
+}
+
+.task-scope-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #d1ecf9;
+  color: #1e6fa3;
+  border-radius: 20px;
+  padding: 5px 10px 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.scope-tag-close {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.task-header-right {
+  flex-shrink: 0;
+}
+
+.task-header-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 6px;
+  padding: 6px 14px;
+  background: #f3f4f7;
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.search-icon {
+  font-size: 14px;
+}
+
+/* ── Tab row ── */
+.task-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(219, 224, 237, 0.6);
+  padding-bottom: 8px;
+}
+
+.task-tabs-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-tabs-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* ── Scope filter row ── */
+.task-scope-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.task-scope-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #6b7280;
+}
+
+.task-scope-btn.is-active {
+  background: #e8f4fd;
+  color: #1e6fa3;
+  font-weight: 700;
+}
+
+/* ── Signal tab red tone ── */
+.task-signal-tab.red span {
+  background: #e4623c;
+}
+
+/* ── Deadline board 7 columns ── */
+.task-deadline-board-7 {
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+}
+
+/* ── List view gear/hamburger cells ── */
+.gear-cell {
+  width: 36px;
+  text-align: center;
+  color: #b0b7c7;
+}
+
+.th-checkbox,
+.row-checkbox {
+  color: #b0b7c7;
+  cursor: pointer;
+}
+
+.th-gear {
+  color: #b0b7c7;
+  font-size: 15px;
+}
+
+.row-hamburger {
+  color: #b0b7c7;
+  cursor: grab;
+  font-size: 14px;
+}
+
+/* ── Avatar circle (replaces emoji) ── */
+.task-avatar-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7dd3fc, #a5b4fc);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.task-avatar-circle.small {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+}
+
+.task-arrow-icon {
+  color: #c0c6d3;
+  font-size: 16px;
+}
+
+/* ── Project dot ── */
+.project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* ── Plan column action buttons ── */
+.task-column-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.task-column-dots {
+  color: #b0b7c7;
+  letter-spacing: -2px;
+  cursor: pointer;
+}
+
+/* ── List action bar ── */
+.task-action-select {
+  border: 1px solid #dde1ea;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8993a6;
+  background: #f5f6f9;
+  cursor: pointer;
+}
+
+.task-apply-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #bbd742;
+  color: #fff;
+  cursor: pointer;
+}
+
+.task-apply-btn:hover {
+  background: #a9c438;
+}
+
+/* ── Gantt head icons ── */
+.gantt-head-icons {
+  margin-left: auto;
+  font-size: 16px;
+  color: #9aa1af;
+}
+
+.task-gantt-sidebar-head {
+  display: flex;
+  align-items: center;
+}
+
+/* ── Gantt today column highlight ── */
+.gantt-today-col {
+  background: rgba(241, 232, 204, 0.35);
+}
+
+.gantt-today {
+  background: #fff3cd !important;
+  font-weight: 700;
+  color: #5d4e0e !important;
+}
+
+.gantt-weekend {
+  background: #f9fafb !important;
+  color: #c1c7d2 !important;
+}
+
+.gantt-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e4623c;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.task-gantt-chart {
+  position: relative;
+}
+
 @media (max-width: 1200px) {
   .task-deadline-board,
+  .task-deadline-board-7,
   .task-plan-board,
   .task-calendar-weekdays,
   .task-calendar-grid,
@@ -3124,13 +3460,7 @@ body::after {
   min-width: 0;
 }
 
-.task-intake-card {
-  margin-bottom: 4px;
-}
-
-.task-inline-form .field-row {
-  flex-wrap: wrap;
-}
+/* task-intake-card removed: inline form replaced by header bar */
 
 /* parity pass: tasks/crm/documents */
 .task-module-panel,
@@ -3847,6 +4177,45 @@ body::after {
 
 .task-gantt-sidebar {
   border-color: #f0f0f0;
+}
+
+.task-page-title {
+  color: var(--text);
+}
+
+.task-role-pill {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--muted);
+}
+
+.task-role-pill.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.task-scope-tag {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.task-header-search {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--muted);
+}
+
+.task-scope-btn {
+  color: var(--muted);
+}
+
+.task-scope-btn.is-active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.task-action-select {
+  background: #f5f6f9;
+  border-color: #e5e7eb;
+  color: var(--muted);
 }
 
 /* ── Feed / timeline ── */

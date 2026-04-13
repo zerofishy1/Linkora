@@ -1284,107 +1284,142 @@ function renderMessenger(route) {
     return renderTaskChatView();
   }
 
-  return `
-    <section class="panel fade-in">
-      <div class="page-head">
-        <div>
-          <h2>Диалоги и рабочие каналы</h2>
-          <p>Чаты, задачи, AI, коллабы, каналы и уведомления под рукой.</p>
-        </div>
-      </div>
-    </section>
+  const chatTabs = [
+    { id: "chat", label: "Чаты" },
+    { id: "task", label: "Чаты задач" },
+    { id: "ai", label: "Orbit AI" },
+    { id: "collab", label: "Коллабы" },
+    { id: "channel", label: "Каналы" },
+    { id: "notify", label: "Уведомления" },
+    { id: "phone", label: "Телефония" },
+  ];
 
-    <section class="messenger-shell bitrix-messenger-shell fade-in">
-      <div class="panel scroll-area bitrix-chat-list">
-        <div class="panel-head">
-          <div>
-            <h3>Потоки</h3>
-            <p>${chats.length ? `Найдено ${chats.length}` : "Потоков не найдено"}</p>
+  return `
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Мессенджер</h2>
+          <button class="task-create-btn" data-action="route-create" data-target="chat">
+            Создать чат &#9998;
+          </button>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
         </div>
-        <div class="bitrix-chat-search-row">
-          <button class="tiny-icon-button" data-action="navigate" data-route="messenger">☷</button>
-          <label class="search-shell compact">
-            <input
-              type="search"
-              placeholder="Найти сотрудника или чат"
-              data-action="search"
-              value="${escapeHtml(state.ui.query)}"
-            />
-          </label>
-          <button class="tiny-icon-button" data-action="route-create" data-target="chat">✎</button>
+      </div>
+
+      <!-- Tab row -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${chatTabs.map((tab) => `
+            <button class="task-view-tab ${activeTab === tab.id ? "is-active" : ""}" data-action="set-chat-tab" data-chat-tab="${tab.id}">${escapeHtml(tab.label)}</button>
+          `).join("")}
         </div>
-        <div class="list bitrix-thread-list">
-          ${chats.length
-            ? chats
-                .map((chat) => {
-                  const active = current && current.id === chat.id;
-                  return `
-                    <button
-                      class="chat-thread-card ${active ? "is-active" : ""}"
-                      data-action="select-chat"
-                      data-chat-id="${chat.id}"
-                    >
-                      <div class="thread-avatar">${escapeHtml((chat.title || "?").slice(0, 2))}</div>
-                      <div class="thread-content">
-                        <div class="thread-title"><strong>${escapeHtml(chat.title)}</strong><span>${escapeHtml(chat.updatedAt)}</span></div>
-                        <div class="thread-snippet">${escapeHtml(chat.snippet)}</div>
-                      </div>
-                      ${chat.unread ? `<span class="pill-counter">${chat.unread}</span>` : ""}
-                    </button>
-                  `;
-                })
-                .join("")
-            : `<div class="empty-state">По текущему поиску ничего не найдено.</div>`}
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
         </div>
       </div>
 
-      <section class="message-pane bitrix-message-pane panel">
-        ${
-          current
-            ? `
-              <div class="pane-head">
-                <h3>${escapeHtml(current.title)}</h3>
-                <p>${escapeHtml(current.focus)}</p>
-              </div>
-              <div class="messages scroll-area">
-                ${current.messages
-                  .map(
-                    (message) => `
-                    <article class="message-bubble ${message.mine ? "is-mine" : ""}">
-                      <div class="message-author">${escapeHtml(message.author)}</div>
-                      <p>${escapeHtml(message.text)}</p>
-                      <div class="message-time">${escapeHtml(message.time)}</div>
-                    </article>
-                  `,
-                  )
-                  .join("")}
-              </div>
-              <form class="message-form" data-form="send-message">
-                <input type="hidden" name="chatId" value="${escapeHtml(current.id)}" />
-                <div class="field-row">
-                  <div class="field">
-                    <label for="messageBody">Сообщение</label>
-                    <textarea id="messageBody" name="message" placeholder="Написать короткий update, решение или follow-up"></textarea>
+      <!-- Content: messenger shell -->
+      <section class="messenger-shell bitrix-messenger-shell fade-in" style="margin-top:0">
+        <div class="panel scroll-area bitrix-chat-list">
+          <div class="panel-head">
+            <div>
+              <h3>Потоки</h3>
+              <p>${chats.length ? `Найдено ${chats.length}` : "Потоков не найдено"}</p>
+            </div>
+          </div>
+          <div class="bitrix-chat-search-row">
+            <button class="tiny-icon-button" data-action="navigate" data-route="messenger">&#9783;</button>
+            <label class="search-shell compact">
+              <input
+                type="search"
+                placeholder="Найти сотрудника или чат"
+                data-action="search"
+                value="${escapeHtml(state.ui.query)}"
+              />
+            </label>
+            <button class="tiny-icon-button" data-action="route-create" data-target="chat">&#9998;</button>
+          </div>
+          <div class="list bitrix-thread-list">
+            ${chats.length
+              ? chats
+                  .map((chat) => {
+                    const active = current && current.id === chat.id;
+                    return `
+                      <button
+                        class="chat-thread-card ${active ? "is-active" : ""}"
+                        data-action="select-chat"
+                        data-chat-id="${chat.id}"
+                      >
+                        <div class="thread-avatar">${escapeHtml((chat.title || "?").slice(0, 2))}</div>
+                        <div class="thread-content">
+                          <div class="thread-title"><strong>${escapeHtml(chat.title)}</strong><span>${escapeHtml(chat.updatedAt)}</span></div>
+                          <div class="thread-snippet">${escapeHtml(chat.snippet)}</div>
+                        </div>
+                        ${chat.unread ? `<span class="pill-counter">${chat.unread}</span>` : ""}
+                      </button>
+                    `;
+                  })
+                  .join("")
+              : `<div class="empty-state">По текущему поиску ничего не найдено.</div>`}
+          </div>
+        </div>
+
+        <section class="message-pane bitrix-message-pane panel">
+          ${
+            current
+              ? `
+                <div class="pane-head">
+                  <h3>${escapeHtml(current.title)}</h3>
+                  <p>${escapeHtml(current.focus)}</p>
+                </div>
+                <div class="messages scroll-area">
+                  ${current.messages
+                    .map(
+                      (message) => `
+                      <article class="message-bubble ${message.mine ? "is-mine" : ""}">
+                        <div class="message-author">${escapeHtml(message.author)}</div>
+                        <p>${escapeHtml(message.text)}</p>
+                        <div class="message-time">${escapeHtml(message.time)}</div>
+                      </article>
+                    `,
+                    )
+                    .join("")}
+                </div>
+                <form class="message-form" data-form="send-message">
+                  <input type="hidden" name="chatId" value="${escapeHtml(current.id)}" />
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="messageBody">Сообщение</label>
+                      <textarea id="messageBody" name="message" placeholder="Написать короткий update, решение или follow-up"></textarea>
+                    </div>
+                    <button class="primary-button" type="submit">Отправить</button>
                   </div>
-                  <button class="primary-button" type="submit">Отправить</button>
+                </form>
+              `
+              : `
+                <div class="bitrix-empty-state">
+                  <div class="messenger-center-art">
+                    <div class="art-card main"></div>
+                    <div class="art-card mini one"></div>
+                    <div class="art-card mini two"></div>
+                    <div class="art-mascot"></div>
+                  </div>
+                  <h3>Выберите чат и начните общение</h3>
+                  <p>Чаты, каналы и уведомления собраны в едином окне.</p>
                 </div>
-              </form>
-            `
-            : `
-              <div class="bitrix-empty-state">
-                <div class="messenger-center-art">
-                  <div class="art-card main"></div>
-                  <div class="art-card mini one"></div>
-                  <div class="art-card mini two"></div>
-                  <div class="art-mascot"></div>
-                </div>
-                <h3>Выберите чат и начните общение</h3>
-                <p>Чаты, каналы и уведомления собраны в едином окне.</p>
-              </div>
-            `
-        }
+              `
+          }
+        </section>
       </section>
+
     </section>
   `;
 }
@@ -1435,207 +1470,401 @@ function renderQuickRail(route) {
 }
 
 function renderFeed() {
-  return `
-    <section class="panel fade-in">
-      <div class="page-head">
-        <div>
-          <h2>Лента активности</h2>
-          <p>Короткие апдейты, решения, изменения процессов и заметки по рабочему контуру.</p>
-        </div>
-      </div>
-      <div class="tab-row feed-quick-tabs">
-        <button class="tab-chip" data-action="quick-capture">Сообщение</button>
-        <button class="tab-chip" data-action="navigate" data-route="calendar">Событие</button>
-        <button
-          class="tab-chip"
-          data-action="create-task"
-          data-title="Провести опрос команды"
-          data-description="Задача создана из ленты в формате опроса."
-          data-tag="feed"
-        >
-          Опрос
-        </button>
-        <button class="tab-chip" data-action="navigate" data-route="documents">Файл</button>
-      </div>
-      <form class="composer-card feed-composer" data-form="add-feed">
-        <div class="field-row">
-          <div class="field">
-            <label for="feedTitle">Заголовок</label>
-            <input id="feedTitle" name="title" placeholder="Что произошло или что ты решил?" />
-          </div>
-          <div class="field">
-            <label for="feedTag">Тег</label>
-            <select id="feedTag" name="tag">
-              <option value="операции">операции</option>
-              <option value="контент">контент</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label for="feedBody">Текст</label>
-          <textarea id="feedBody" name="body" placeholder="Оставь короткое описание, чтобы вернуться к решению позже."></textarea>
-        </div>
-        <div class="hero-actions">
-          <button type="submit" class="primary-button">Опубликовать в ленту</button>
-        </div>
-      </form>
-    </section>
+  const feedScope = state.ui.feedScope || "all";
+  const scopeTabs = [
+    { id: "all", label: "Все" },
+    { id: "unread", label: "Непрочитанные" },
+    { id: "favorite", label: "Избранное" },
+  ];
 
-    <section class="dashboard-grid fade-in">
-      <div class="stack">
-        ${state.feed
-          .map(
-            (post) => `
-            <article class="panel feed-card">
-              <div class="page-head">
+  return `
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Живая лента</h2>
+          <button class="task-create-btn" data-action="quick-capture">
+            + Добавить
+          </button>
+          <span class="task-role-pill is-active">Все <span class="pill-counter">${state.feed.length}</span></span>
+          <span class="task-role-pill">Важное</span>
+          <span class="task-role-pill">Работа</span>
+          <span class="task-role-pill">Мои</span>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab row -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          <button class="task-view-tab is-active" data-action="quick-capture">Сообщение</button>
+          <button class="task-view-tab" data-action="navigate" data-route="calendar">Событие</button>
+          <button class="task-view-tab" data-action="create-task" data-title="Провести опрос команды" data-description="Задача создана из ленты в формате опроса." data-tag="feed">Опрос</button>
+          <button class="task-view-tab" data-action="navigate" data-route="documents">Файл</button>
+          <button class="task-view-tab">Ещё</button>
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Scope row -->
+      <div class="task-scope-row">
+        ${scopeTabs.map((s) => `
+          <button class="task-scope-btn ${feedScope === s.id ? "is-active" : ""}" data-action="set-feed-scope" data-feed-scope="${s.id}">${escapeHtml(s.label)}</button>
+        `).join("")}
+      </div>
+
+      <!-- Content -->
+      <div class="task-surface fade-in">
+        <form class="composer-card feed-composer" data-form="add-feed">
+          <div class="field-row">
+            <div class="field">
+              <label for="feedTitle">Заголовок</label>
+              <input id="feedTitle" name="title" placeholder="Что произошло или что ты решил?" />
+            </div>
+            <div class="field">
+              <label for="feedTag">Тег</label>
+              <select id="feedTag" name="tag">
+                <option value="операции">операции</option>
+                <option value="контент">контент</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="feedBody">Текст</label>
+            <textarea id="feedBody" name="body" placeholder="Оставь короткое описание, чтобы вернуться к решению позже."></textarea>
+          </div>
+          <div class="hero-actions">
+            <button type="submit" class="primary-button">Опубликовать в ленту</button>
+          </div>
+        </form>
+
+        <div class="dashboard-grid" style="margin-top:12px">
+          <div class="stack">
+            ${state.feed
+              .map(
+                (post) => `
+                <article class="panel feed-card">
+                  <div class="page-head">
+                    <div>
+                      <h2>${escapeHtml(post.title)}</h2>
+                      <p>${escapeHtml(post.body)}</p>
+                    </div>
+                    <span class="status-pill active">${escapeHtml(post.tag)}</span>
+                  </div>
+                  <footer class="feed-card-footer">
+                    <span>${escapeHtml(post.author)}</span>
+                    <span>${escapeHtml(post.createdAt)}</span>
+                  </footer>
+                  <div class="label-row feed-card-actions">
+                    <button class="ghost-button" data-action="quick-capture">Нравится</button>
+                    <button
+                      class="ghost-button"
+                      data-action="create-task"
+                      data-title="${escapeHtml(`Follow-up: ${post.title}`)}"
+                      data-description="${escapeHtml(post.body)}"
+                      data-tag="feed"
+                    >
+                      Комментировать
+                    </button>
+                    <button class="ghost-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
+                  </div>
+                </article>
+              `,
+              )
+              .join("")}
+          </div>
+          <div class="stack">
+            <section class="panel">
+              <div class="panel-head">
                 <div>
-                  <h2>${escapeHtml(post.title)}</h2>
-                  <p>${escapeHtml(post.body)}</p>
+                  <h3>Недельные сигналы</h3>
+                  <p>Блок для ручной интерпретации, а не для декоративных графиков.</p>
                 </div>
-                <span class="status-pill active">${escapeHtml(post.tag)}</span>
               </div>
-              <footer class="feed-card-footer">
-                <span>${escapeHtml(post.author)}</span>
-                <span>${escapeHtml(post.createdAt)}</span>
-              </footer>
-              <div class="label-row feed-card-actions">
-                <button class="ghost-button" data-action="quick-capture">Нравится</button>
-                <button
-                  class="ghost-button"
-                  data-action="create-task"
-                  data-title="${escapeHtml(`Follow-up: ${post.title}`)}"
-                  data-description="${escapeHtml(post.body)}"
-                  data-tag="feed"
-                >
-                  Комментировать
-                </button>
-                <button class="ghost-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
+              <div class="mini-grid">
+                <div class="mini-card">
+                  <h4>Точка давления</h4>
+                  <p>Входящие письма и follow-up по сделкам всё ещё конкурируют за внимание.</p>
+                  <button class="ghost-button" data-action="navigate" data-route="mail">Открыть входящие</button>
+                </div>
+                <div class="mini-card">
+                  <h4>Лучшее решение</h4>
+                  <p>Выносить итог созвона сразу в ленту и параллельно создавать задачу.</p>
+                  <button
+                    class="ghost-button"
+                    data-action="create-task"
+                    data-title="Закрепить итог созвона в задаче"
+                    data-description="Задача создана из блока недельных сигналов в ленте."
+                    data-tag="feed"
+                  >
+                    Создать задачу
+                  </button>
+                </div>
+                <div class="mini-card">
+                  <h4>Следующий апгрейд</h4>
+                  <p>Связать ленту с задачами и документами.</p>
+                  <button class="ghost-button" data-action="navigate" data-route="documents">Перейти к документам</button>
+                </div>
               </div>
-            </article>
-          `,
-          )
-          .join("")}
-      </div>
-      <div class="stack">
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>Недельные сигналы</h3>
-              <p>Блок для ручной интерпретации, а не для декоративных графиков.</p>
-            </div>
+            </section>
           </div>
-          <div class="mini-grid">
-            <div class="mini-card">
-              <h4>Точка давления</h4>
-              <p>Входящие письма и follow-up по сделкам всё ещё конкурируют за внимание.</p>
-              <button class="ghost-button" data-action="navigate" data-route="mail">Открыть входящие</button>
-            </div>
-            <div class="mini-card">
-              <h4>Лучшее решение</h4>
-              <p>Выносить итог созвона сразу в ленту и параллельно создавать задачу.</p>
-              <button
-                class="ghost-button"
-                data-action="create-task"
-                data-title="Закрепить итог созвона в задаче"
-                data-description="Задача создана из блока недельных сигналов в ленте."
-                data-tag="feed"
-              >
-                Создать задачу
-              </button>
-            </div>
-            <div class="mini-card">
-              <h4>Следующий апгрейд</h4>
-              <p>Связать ленту с задачами и документами.</p>
-              <button class="ghost-button" data-action="navigate" data-route="documents">Перейти к документам</button>
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
+
     </section>
   `;
 }
 
 function renderCalendar() {
   const calendarView = state.ui.calendarView || "month";
-  const views = [
+  const calScope = state.ui.calScope || "all";
+  const viewTabs = [
     { id: "day", label: "День" },
     { id: "week", label: "Неделя" },
     { id: "month", label: "Месяц" },
     { id: "schedule", label: "Расписание" },
   ];
+  const scopeTabs = [
+    { id: "all", label: "Все" },
+    { id: "my", label: "Мои" },
+    { id: "work", label: "Рабочие" },
+  ];
+
+  const year = state.ui.taskCalYear || new Date().getFullYear();
+  const month = state.ui.taskCalMonth ?? new Date().getMonth();
+  const grid = getCalendarGrid(year, month);
+  const todayDate = new Date();
+
+  /* Collect all user tasks (main + group) with dates */
+  const userName = state.profile.name || "";
+  const allCalTasks = [
+    ...state.tasks.filter((t) => {
+      const isInvolved = !userName
+        || (t.assignee || "").toLowerCase().includes(userName.toLowerCase())
+        || (t.creator || "").toLowerCase().includes(userName.toLowerCase())
+        || (t.owner || "").toLowerCase().includes(userName.toLowerCase());
+      return isInvolved && (t.dueDate || t.startDate);
+    }),
+    ...(state.ui.groupTasks || []).filter((t) => {
+      const isInvolved = !userName
+        || (t.assignee || "").toLowerCase().includes(userName.toLowerCase())
+        || (t.creator || "").toLowerCase().includes(userName.toLowerCase());
+      return isInvolved && (t.dueDate || t.startDate);
+    }),
+  ];
+  const calSeenIds = new Set();
+  const calUserTasks = allCalTasks.filter((t) => {
+    if (calSeenIds.has(t.id)) return false;
+    calSeenIds.add(t.id);
+    return true;
+  });
+
+  function calTasksDueOnDay(day) {
+    return calUserTasks.filter((t) => {
+      if (!t.dueDate) return false;
+      try {
+        const d = new Date(t.dueDate);
+        return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+      } catch { return false; }
+    });
+  }
+  function calTasksStartOnDay(day) {
+    return calUserTasks.filter((t) => {
+      if (!t.startDate || !t.dueDate) return false;
+      try {
+        const sd = new Date(t.startDate);
+        return sd.getFullYear() === year && sd.getMonth() === month && sd.getDate() === day;
+      } catch { return false; }
+    });
+  }
+  const calOverdueNow = new Date();
+
+  /* Pre-render calendar cells */
+  const calCellsHtml = grid.map((week) => week.map((cell) => {
+    const isToday = cell.current && cell.day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+    if (!cell.current) {
+      return `<div class="task-calendar-cell task-cal-other"><span class="task-calendar-date">${cell.day}</span></div>`;
+    }
+    const dayEvents = state.events.filter((e) => {
+      if (!e.date) return false;
+      const parts = e.date.replace(/\s+/g, " ").trim().split(" ");
+      if (parts.length < 2) return false;
+      return parseInt(parts[0], 10) === cell.day;
+    });
+    const dueTasks = calTasksDueOnDay(cell.day);
+    const startTasks = calTasksStartOnDay(cell.day).filter((st) => !dueTasks.find((dt) => dt.id === st.id));
+    const totalBadge = dayEvents.length + dueTasks.length + startTasks.length;
+
+    const eventsHtml = dayEvents.map((e) =>
+      `<div class="task-calendar-event cal-event-type"><span class="dot" style="background:#5e88d7"></span>${escapeHtml(e.title.slice(0, 16))}${e.title.length > 16 ? "..." : ""} <small>${escapeHtml(e.time || "")}</small></div>`
+    ).join("");
+
+    const dueHtml = dueTasks.map((t) => {
+      const isOv = t.dueDate && new Date(t.dueDate) < calOverdueNow;
+      const dd = new Date(t.dueDate);
+      const timeStr = dd.getHours() ? String(dd.getHours()).padStart(2, "0") + ":" + String(dd.getMinutes()).padStart(2, "0") : "";
+      return `<div class="task-calendar-event cal-task-type ${isOv ? "overdue" : ""}" data-action="open-task-detail" data-task-id="${t.id}"><span class="dot" style="background:${isOv ? "#f55" : "#55b586"}"></span>${escapeHtml(t.title.slice(0, 14))}${t.title.length > 14 ? "..." : ""} <small>${escapeHtml(timeStr)}</small></div>`;
+    }).join("");
+
+    const startHtml = startTasks.map((t) =>
+      `<div class="task-calendar-event start-marker" data-action="open-task-detail" data-task-id="${t.id}"><span class="dot" style="background:var(--accent)"></span>${escapeHtml(t.title.slice(0, 12))}... <small>начало</small></div>`
+    ).join("");
+
+    return `
+      <div class="task-calendar-cell ${isToday ? "selected" : ""}">
+        <span class="task-calendar-date">${cell.day}</span>
+        ${eventsHtml}
+        ${dueHtml}
+        ${startHtml}
+      </div>`;
+  }).join("")).join("");
+
+  /* Pre-render upcoming tasks & events list */
+  const sortedCalTasks = [...calUserTasks].sort((a, b) => {
+    const da = new Date(a.dueDate || a.startDate || "2099-01-01");
+    const db = new Date(b.dueDate || b.startDate || "2099-01-01");
+    return da.getTime() - db.getTime();
+  }).slice(0, 10);
+  const upcomingTasksHtml = sortedCalTasks.map((t) => {
+    const isOv = t.dueDate && new Date(t.dueDate) < calOverdueNow;
+    return `
+      <article class="timeline-item" style="padding:8px 0;border-bottom:1px solid var(--panel-border);cursor:pointer" data-action="open-task-detail" data-task-id="${t.id}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${isOv ? "#f55" : "#55b586"};flex-shrink:0"></span>
+          <strong style="flex:1">${escapeHtml(t.title)}</strong>
+          <span class="task-deadline-pill ${isOv ? "overdue" : "upcoming"}" style="font-size:11px">${t.dueDate ? formatDueDate(t.dueDate) : "без срока"}</span>
+        </div>
+        ${t.startDate ? `<small style="color:var(--text-secondary);margin-left:16px">Начало: ${formatDueDate(t.startDate)}</small>` : ""}
+      </article>`;
+  }).join("");
+  const upcomingEventsHtml = state.events.map((event) => `
+    <article class="timeline-item" style="padding:8px 0;border-bottom:1px solid var(--panel-border)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5e88d7;flex-shrink:0"></span>
+        <strong style="flex:1">${escapeHtml(event.title)}</strong>
+        <span class="type-pill ${escapeHtml(event.type)}" style="font-size:11px">${escapeHtml(event.type)}</span>
+      </div>
+      <small style="color:var(--text-secondary);margin-left:16px">${escapeHtml(event.date)} \u2022 ${escapeHtml(event.time)}</small>
+    </article>
+  `).join("");
 
   return `
-    <section class="timeline-grid fade-in">
-      <section class="panel">
-        <div class="page-head">
-          <div>
-            <h2>Ближайшие события</h2>
-            <p>Календарь в личной версии делает ставку на ясность, а не на перегруженную сетку.</p>
-          </div>
-        </div>
-        <div class="timeline-list">
-          ${state.events
-            .map(
-              (event) => `
-              <article class="timeline-item">
-                <time>${escapeHtml(`${event.date} • ${event.time}`)}</time>
-                <h4>${escapeHtml(event.title)}</h4>
-                <div class="label-row">
-                  <span class="type-pill ${escapeHtml(event.type)}">${escapeHtml(event.type)}</span>
-                </div>
-                <div class="hero-actions">
-                  <button
-                    class="ghost-button"
-                    data-action="create-task"
-                    data-title="${escapeHtml(`Событие: ${event.title}`)}"
-                    data-description="${escapeHtml(`Подготовка к событию ${event.title} (${event.date} ${event.time}).`)}"
-                    data-tag="calendar"
-                  >
-                    Сделать задачей
-                  </button>
-                </div>
-              </article>
-            `,
-            )
-            .join("")}
-        </div>
-      </section>
+    <section class="task-shell fade-in">
 
-      <section class="panel">
-        <div class="page-head">
-          <div>
-            <h2>Добавить событие</h2>
-            <p>Используй для встреч, фокус-блоков и персональных ритуалов.</p>
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Календарь</h2>
+          <button class="task-create-btn" data-action="route-create" data-target="event">
+            + Добавить
+          </button>
+          <span class="task-role-pill is-active">Задачи</span>
+          <span class="task-role-pill">События</span>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
         </div>
-        <form class="composer-card" data-form="add-event">
-          <div class="form-grid">
-            <div class="field">
-              <label for="eventTitle">Название</label>
-              <input id="eventTitle" name="title" placeholder="Например: review по задачам" />
+      </div>
+
+      <!-- Tab row -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${viewTabs.map((tab) => `
+            <button class="task-view-tab ${calendarView === tab.id ? "is-active" : ""}" data-action="set-calendar-view" data-calendar-view="${tab.id}">${escapeHtml(tab.label)}</button>
+          `).join("")}
+          <span style="margin-left:8px;color:var(--text-secondary);font-size:12px">| Фокус-блоки</span>
+          <span style="color:var(--text-secondary);font-size:12px">Приглашения</span>
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Scope row -->
+      <div class="task-scope-row">
+        ${scopeTabs.map((s) => `
+          <button class="task-scope-btn ${calScope === s.id ? "is-active" : ""}" data-action="set-cal-scope" data-cal-scope="${s.id}">${escapeHtml(s.label)}</button>
+        `).join("")}
+      </div>
+
+      <!-- Calendar grid with tasks + events -->
+      <div class="task-surface fade-in">
+        <div class="task-calendar-wrap">
+          <div class="task-calendar-head">
+            <h3>${getMonthName(month)}, ${year}</h3>
+            <div class="task-calendar-controls">
+              <button class="ghost-button" data-action="task-cal-prev">&#8249;</button>
+              <button class="ghost-button" data-action="task-cal-today">Сегодня</button>
+              <button class="ghost-button" data-action="task-cal-next">&#8250;</button>
             </div>
-            <div class="field-row">
-              <div class="field">
+          </div>
+          <div class="task-calendar-weekdays">
+            <span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>вс</span>
+          </div>
+          <div class="task-calendar-grid">
+            ${calCellsHtml}
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div style="display:flex;gap:16px;padding:12px 16px;font-size:12px;color:var(--text-secondary)">
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#5e88d7;margin-right:4px"></span>События</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#55b586;margin-right:4px"></span>Задачи</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f55;margin-right:4px"></span>Просроченные</span>
+          <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:4px"></span>Начало задачи</span>
+        </div>
+
+        <!-- Compact add event form -->
+        <div class="cal-add-form-compact" style="margin-top:8px">
+          <h4 style="padding:0 16px;margin:0 0 8px">Добавить событие</h4>
+          <form class="composer-card" data-form="add-event" style="padding:12px 16px">
+            <div class="field-row" style="gap:8px;align-items:flex-end">
+              <div class="field" style="flex:2">
+                <label for="eventTitle">Название</label>
+                <input id="eventTitle" name="title" placeholder="Например: review по задачам" />
+              </div>
+              <div class="field" style="flex:1">
                 <label for="eventDate">Дата</label>
-                <input id="eventDate" name="date" placeholder="08 апр" />
+                <input id="eventDate" name="date" placeholder="дд.мм.гггг" type="date" />
               </div>
-              <div class="field">
+              <div class="field" style="flex:1">
                 <label for="eventTime">Время</label>
-                <input id="eventTime" name="time" placeholder="15:30" />
+                <input id="eventTime" name="time" placeholder="--:--" type="time" />
               </div>
-              <div class="field">
+              <div class="field" style="flex:1">
                 <label for="eventType">Тип</label>
                 <select id="eventType" name="type">
-                  <option value="meeting">meeting</option>
-                  <option value="deadline">deadline</option>
-                  <option value="note">note</option>
+                  <option value="meeting">Встреча</option>
+                  <option value="deadline">Дедлайн</option>
+                  <option value="note">Заметка</option>
                 </select>
               </div>
+              <button type="submit" class="task-create-btn" style="margin:0;height:36px">Создать событие</button>
             </div>
-            <button type="submit" class="primary-button">Сохранить в календарь</button>
-          </div>
-        </form>
-      </section>
+          </form>
+        </div>
+
+        <!-- Upcoming tasks & events list -->
+        <div class="cal-events-list" style="margin-top:12px;padding:0 16px">
+          <h4 style="margin:0 0 8px">Ближайшие задачи и события</h4>
+          ${upcomingTasksHtml}
+          ${upcomingEventsHtml}
+        </div>
+      </div>
+
     </section>
   `;
 }
@@ -1773,129 +2002,168 @@ function renderDocs(route) {
   `;
 
   return `
-    <section class="panel fade-in">
-      <div class="page-head">
-        <div>
-          <h2>Документный контур</h2>
-          <p>Три близких режима: знания, визуальные доски и файловое хранилище.</p>
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Документный контур</h2>
+          <button class="task-create-btn" data-action="route-create" data-target="document">
+            DOC Создать
+          </button>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
+          </div>
         </div>
       </div>
-    </section>
 
-    <section class="docs-launch-grid fade-in">
-      ${launchers
-        .map(
-          (item) => `
-            <button
-              class="doc-launch-card"
-              data-action="route-create"
-              data-target="${item.target}"
-              ${item.route ? `data-route="${item.route}"` : ""}
-            >
-              <span class="doc-launch-icon">${escapeHtml(item.meta)}</span>
-              <strong>${escapeHtml(item.label)}</strong>
-            </button>
-          `,
-        )
-        .join("")}
-    </section>
-
-    <section class="panel fade-in">
-      <div class="docs-open-row">
-        <span class="small-tag">Открыть</span>
-        ${openActions
-          .map(
-            (item) => `
-              <button
-                class="ghost-button"
-                data-action="${item.action}"
-                ${item.target ? `data-target="${item.target}"` : ""}
-                ${item.route ? `data-route="${item.route}"` : ""}
-              >
-                ${escapeHtml(item.label)}
-              </button>
-            `,
-          )
-          .join("")}
+      <!-- Tab row: layout tabs + launchers -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${layoutTabs.map((item) => `
+            <button class="task-view-tab ${docsLayout === item.id ? "is-active" : ""}" data-action="set-docs-layout" data-docs-layout="${item.id}">${escapeHtml(item.label)}</button>
+          `).join("")}
+          <button class="task-view-tab" data-action="quick-capture">БУСТЫ</button>
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
       </div>
-      <div class="docs-layout-row">
-        ${layoutTabs
-          .map(
-            (item) => `
-              <button
-                class="tab-chip ${docsLayout === item.id ? "is-active" : ""}"
-                data-action="set-docs-layout"
-                data-docs-layout="${item.id}"
-              >
-                ${escapeHtml(item.label)}
-              </button>
-            `,
-          )
-          .join("")}
-        <button class="tab-chip" data-action="quick-capture">БУСТЫ</button>
-      </div>
-    </section>
 
-    ${
-      docsLayout === "grid"
-        ? renderGridLayout()
-        : docsLayout === "tile"
-          ? renderTileLayout()
-          : renderListLayout()
-    }
+      <!-- Launch grid -->
+      <section class="docs-launch-grid fade-in" style="margin-top:0">
+        ${launchers.map((item) => `
+          <button class="doc-launch-card" data-action="route-create" data-target="${item.target}" ${item.route ? 'data-route="' + item.route + '"' : ""}>
+            <span class="doc-launch-icon">${escapeHtml(item.meta)}</span>
+            <strong>${escapeHtml(item.label)}</strong>
+          </button>
+        `).join("")}
+      </section>
+
+      <!-- Open row -->
+      <section class="task-surface fade-in" style="padding:8px 16px">
+        <div class="docs-open-row">
+          <span class="small-tag">Открыть</span>
+          ${openActions.map((item) => `
+            <button class="ghost-button" data-action="${item.action}" ${item.target ? 'data-target="' + item.target + '"' : ""} ${item.route ? 'data-route="' + item.route + '"' : ""}>${escapeHtml(item.label)}</button>
+          `).join("")}
+        </div>
+      </section>
+
+      <!-- Content -->
+      ${docsLayout === "grid" ? renderGridLayout() : docsLayout === "tile" ? renderTileLayout() : renderListLayout()}
+
+    </section>
   `;
 }
 
 function renderMail() {
   const selected =
     state.mail.find((item) => item.id === state.ui.mailSelection) || state.mail[0];
+  const mailTab = state.ui.mailTab || "inbox";
+  const mailScope = state.ui.mailScope || "all";
+  const unreadCount = state.mail.filter((m) => m.unread).length;
+
+  const mailTabs = [
+    { id: "inbox", label: "Входящие" },
+    { id: "unread", label: "Непрочитанные" },
+    { id: "sent", label: "Исходящие" },
+    { id: "spam", label: "Спам" },
+    { id: "trash", label: "Корзина" },
+  ];
+  const scopeTabs = [
+    { id: "all", label: "Все" },
+    { id: "unread", label: "Непрочитанные" },
+    { id: "important", label: "Важные" },
+  ];
 
   return `
-    <section class="mail-grid fade-in">
-      <section class="panel">
-        <div class="page-head">
-          <div>
-            <h2>Inbox</h2>
-            <p>Письма, идеи и входящие сигналы в формате без лишнего визуального шума.</p>
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Почта</h2>
+          <button class="task-create-btn" data-action="quick-capture">
+            + Написать
+          </button>
+          <span class="task-role-pill is-active">Все <span class="pill-counter">${state.mail.length}</span></span>
+          <span class="task-role-pill">Непрочитанные <span class="pill-counter">${unreadCount}</span></span>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
         </div>
-        <div class="mail-list">
-          ${state.mail
-            .map(
-              (mail) => `
-              <button
-                class="mail-item ${selected && selected.id === mail.id ? "is-active" : ""}"
-                data-action="select-mail"
-                data-mail-id="${mail.id}"
-              >
-                <h4>${escapeHtml(mail.subject)}</h4>
-                <div class="label-row">
-                  <span class="small-tag">${escapeHtml(mail.from)}</span>
-                  ${mail.unread ? `<span class="status-pill active">new</span>` : ""}
-                </div>
-                <p>${escapeHtml(mail.preview)}</p>
-                <footer>
-                  <span>${escapeHtml(mail.receivedAt)}</span>
-                </footer>
-              </button>
-            `,
-            )
-            .join("")}
+      </div>
+
+      <!-- Tab row -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${mailTabs.map((tab) => `
+            <button class="task-view-tab ${mailTab === tab.id ? "is-active" : ""}" data-action="set-mail-tab" data-mail-tab="${tab.id}">${escapeHtml(tab.label)}</button>
+          `).join("")}
         </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Scope row -->
+      <div class="task-scope-row">
+        ${scopeTabs.map((s) => `
+          <button class="task-scope-btn ${mailScope === s.id ? "is-active" : ""}" data-action="set-mail-scope" data-mail-scope="${s.id}">${escapeHtml(s.label)}</button>
+        `).join("")}
+      </div>
+
+      <!-- Content: mail grid -->
+      <section class="mail-grid fade-in" style="margin-top:0">
+        <section class="panel">
+          <div class="mail-list">
+            ${state.mail
+              .map(
+                (mail) => `
+                <button
+                  class="mail-item ${selected && selected.id === mail.id ? "is-active" : ""}"
+                  data-action="select-mail"
+                  data-mail-id="${mail.id}"
+                >
+                  <h4>${escapeHtml(mail.subject)}</h4>
+                  <div class="label-row">
+                    <span class="small-tag">${escapeHtml(mail.from)}</span>
+                    ${mail.unread ? `<span class="status-pill active">new</span>` : ""}
+                  </div>
+                  <p>${escapeHtml(mail.preview)}</p>
+                  <footer>
+                    <span>${escapeHtml(mail.receivedAt)}</span>
+                  </footer>
+                </button>
+              `,
+              )
+              .join("")}
+          </div>
+        </section>
+
+        <article class="mail-preview fade-in">
+          <div class="page-head">
+            <div>
+              <h2>${escapeHtml(selected.subject)}</h2>
+              <p>${escapeHtml(selected.from + " \u2022 " + selected.receivedAt)}</p>
+            </div>
+          </div>
+          <p>${escapeHtml(selected.body)}</p>
+          <div class="hero-actions">
+            <button class="primary-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
+          </div>
+        </article>
       </section>
 
-      <article class="mail-preview fade-in">
-        <div class="page-head">
-          <div>
-            <h2>${escapeHtml(selected.subject)}</h2>
-            <p>${escapeHtml(`${selected.from} • ${selected.receivedAt}`)}</p>
-          </div>
-        </div>
-        <p>${escapeHtml(selected.body)}</p>
-        <div class="hero-actions">
-          <button class="primary-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
-        </div>
-      </article>
     </section>
   `;
 }
@@ -1933,70 +2201,95 @@ function renderGroupList() {
   ];
 
   return `
-    <section class="groups-module fade-in">
-      <!-- Filter bar -->
-      <div class="groups-filters">
-        ${filters.map((f) => `
-          <button class="groups-filter-btn ${filter === f.key ? "is-active" : ""}" data-action="set-groups-filter" data-filter="${f.key}">
-            ${f.label}${f.key === "active" ? ` <span class="groups-filter-count">${state.groups.filter((g) => !g.isArchived).length}</span>` : ""}
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Группы и проекты</h2>
+          <button class="task-create-btn" data-action="show-create-group">
+            + Создать
           </button>
-        `).join("")}
-        <button class="groups-create-btn" data-action="show-create-group">+ Создать</button>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Table -->
-      ${groups.length === 0 ? `
-        <div class="groups-empty">
-          <div class="groups-empty-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+      <!-- Tab row: filters -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${filters.map((f) => `
+            <button class="task-view-tab ${filter === f.key ? "is-active" : ""}" data-action="set-groups-filter" data-filter="${f.key}">
+              ${escapeHtml(f.label)}${f.key === "active" ? ` <span class="pill-counter">${state.groups.filter((g) => !g.isArchived).length}</span>` : ""}
+            </button>
+          `).join("")}
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Content: table -->
+      <div class="task-surface fade-in">
+        ${groups.length === 0 ? `
+          <div class="groups-empty">
+            <div class="groups-empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+            </div>
+            <p>Групп не найдено</p>
+            <p class="groups-empty-hint">Создайте первую группу или проект</p>
           </div>
-          <p>Групп не найдено</p>
-          <p class="groups-empty-hint">Создайте первую группу или проект</p>
-        </div>
-      ` : `
-        <div class="groups-table-wrap">
-          <table class="groups-table">
-            <thead>
-              <tr>
-                <th class="groups-th-name">Название</th>
-                <th class="groups-th-type">Тип</th>
-                <th class="groups-th-privacy">Доступ</th>
-                <th class="groups-th-members">Участники</th>
-                <th class="groups-th-activity">Активность</th>
-                <th class="groups-th-role">Моя роль</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${groups.map((g) => {
-                const privacyLabel = g.privacy === "CLOSED" ? "Закрытый" : "Открытый";
-                const privacyClass = g.privacy === "CLOSED" ? "privacy-closed" : "privacy-open";
-                const typeLabel = g.type === "project" ? "Проект" : "Группа";
-                const roleLabel = g.myRole === "owner" ? "Владелец" : g.myRole === "moderator" ? "Модератор" : g.myRole === "member" ? "Участник" : "—";
-                const initial = g.title.charAt(0).toUpperCase();
-                const actDate = g.lastActivityAt ? formatDate(g.lastActivityAt) : "—";
-                return `
-                  <tr class="groups-row" data-action="open-group" data-group-id="${g.id}">
-                    <td class="groups-td-name">
-                      <div class="groups-name-cell">
-                        <div class="groups-avatar">${initial}</div>
-                        <div>
-                          <strong>${escapeHtml(g.title)}</strong>
-                          ${g.summary ? `<span class="groups-summary">${escapeHtml(g.summary.slice(0, 60))}</span>` : ""}
+        ` : `
+          <div class="groups-table-wrap">
+            <table class="groups-table">
+              <thead>
+                <tr>
+                  <th class="groups-th-name">Название</th>
+                  <th class="groups-th-type">Тип</th>
+                  <th class="groups-th-privacy">Доступ</th>
+                  <th class="groups-th-members">Участники</th>
+                  <th class="groups-th-activity">Активность</th>
+                  <th class="groups-th-role">Моя роль</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${groups.map((g) => {
+                  const privacyLabel = g.privacy === "CLOSED" ? "Закрытый" : "Открытый";
+                  const privacyClass = g.privacy === "CLOSED" ? "privacy-closed" : "privacy-open";
+                  const typeLabel = g.type === "project" ? "Проект" : "Группа";
+                  const roleLabel = g.myRole === "owner" ? "Владелец" : g.myRole === "moderator" ? "Модератор" : g.myRole === "member" ? "Участник" : "---";
+                  const initial = g.title.charAt(0).toUpperCase();
+                  const actDate = g.lastActivityAt ? formatDate(g.lastActivityAt) : "---";
+                  return `
+                    <tr class="groups-row" data-action="open-group" data-group-id="${g.id}">
+                      <td class="groups-td-name">
+                        <div class="groups-name-cell">
+                          <div class="groups-avatar">${initial}</div>
+                          <div>
+                            <strong>${escapeHtml(g.title)}</strong>
+                            ${g.summary ? `<span class="groups-summary">${escapeHtml(g.summary.slice(0, 60))}</span>` : ""}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td><span class="groups-type-badge groups-type-${g.type}">${typeLabel}</span></td>
-                    <td><span class="groups-privacy-badge ${privacyClass}">${privacyLabel}</span></td>
-                    <td>${g.memberCount || 0}</td>
-                    <td class="groups-td-date">${actDate}</td>
-                    <td><span class="groups-role-badge">${roleLabel}</span></td>
-                  </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
-        </div>
-      `}
+                      </td>
+                      <td><span class="groups-type-badge groups-type-${g.type}">${typeLabel}</span></td>
+                      <td><span class="groups-privacy-badge ${privacyClass}">${privacyLabel}</span></td>
+                      <td>${g.memberCount || 0}</td>
+                      <td class="groups-td-date">${actDate}</td>
+                      <td><span class="groups-role-badge">${roleLabel}</span></td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+
     </section>
   `;
 }
@@ -3157,13 +3450,7 @@ function renderTasks() {
   const activeTaskView = state.ui.activeTaskView || "list";
   const taskRole = state.ui.taskRole || "all";
   const taskScope = state.ui.taskScope || "in-progress";
-  const moduleTabs = [
-    { label: "Задачи", route: "tasks" },
-    { label: "Проекты", route: "groups" },
-    { label: "Скрам", route: "boards" },
-    { label: "Шаблоны", route: "documents" },
-    { label: "Корзина", route: "drive" },
-  ];
+
   const roleTabs = [
     { id: "all", label: "Все роли" },
     { id: "created", label: "Поручил" },
@@ -3182,12 +3469,32 @@ function renderTasks() {
     { id: "calendar", label: "Календарь" },
     { id: "gantt", label: "Гант" },
   ];
-  const signalTabs = [
-    { label: "Чаты задач", tone: "green", value: 1, action: "navigate", route: "messenger", chatTab: "task" },
-    { label: "Просрочены", tone: "orange", value: 1, action: "set-task-view", taskView: "deadlines" },
-    { label: "Комментарии", tone: "green", value: 1, action: "quick-capture" },
-    { label: "Прочитать все", tone: "plain", value: null, action: "clear-task-signals" },
-  ];
+
+  /* --- helpers for deadline column assignment by actual dueDate --- */
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart.getTime() + 86400000);
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(todayStart.getDate() - todayStart.getDay() + (todayStart.getDay() === 0 ? -6 : 1));
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
+  const nextWeekEnd = new Date(weekEnd.getTime() + 7 * 86400000);
+  const twoWeeksEnd = new Date(weekEnd.getTime() + 14 * 86400000);
+
+  function getDeadlineColumn(task) {
+    const dd = task.dueDate || task.deadline;
+    if (!dd || dd === "без даты") return "none";
+    try {
+      const d = new Date(dd);
+      if (isNaN(d.getTime())) return "none";
+      if (d < todayStart) return "overdue";
+      if (d < todayEnd) return "today";
+      if (d < weekEnd) return "week";
+      if (d < nextWeekEnd) return "next";
+      if (d >= twoWeeksEnd) return "later";
+      return "later";
+    } catch { return "none"; }
+  }
+
   const deadlineColumns = [
     { id: "overdue", label: "Просрочены", tone: "salmon" },
     { id: "today", label: "На сегодня", tone: "lime" },
@@ -3195,12 +3502,29 @@ function renderTasks() {
     { id: "next", label: "На следующей неделе", tone: "sky" },
     { id: "none", label: "Без срока", tone: "gray" },
     { id: "later", label: "Больше двух недель", tone: "blue" },
+    { id: "done", label: "Завершены", tone: "gray" },
   ];
+
   const planColumns = [
-    { id: "unscheduled", label: "Не спланированы", tone: "cyan" },
+    { id: "unscheduled", label: "Не спланированы", tone: "salmon" },
     { id: "doneweek", label: "Сделаю на неделе", tone: "mint" },
   ];
 
+  /* overdue count for signal tab */
+  const overdueCount = tasks.filter((t) => {
+    const dd = t.dueDate || t.deadline;
+    if (!dd || dd === "без даты") return false;
+    try { return new Date(dd) < todayStart; } catch { return false; }
+  }).length;
+
+  const signalTabs = [
+    { label: "Чаты задач", tone: "green", value: null, action: "navigate", route: "messenger", chatTab: "task" },
+    { label: "Просрочены", tone: "red", value: overdueCount || null, action: "set-task-scope", taskScope: "overdue" },
+    { label: "Комментарии", tone: "green", value: null, action: "quick-capture" },
+    { label: "Прочитать все", tone: "plain", value: null, action: "clear-task-signals" },
+  ];
+
+  /* --- shared card / badge renderers --- */
   const renderTaskBadge = (task) => {
     const dd = task.dueDate || task.deadline;
     if (!dd || dd === "без даты") return `<span class="task-deadline-pill" style="opacity:.5">без срока</span>`;
@@ -3208,30 +3532,38 @@ function renderTasks() {
     return `<span class="task-deadline-pill ${cls}">${task.dueDate ? formatDueDate(task.dueDate) : escapeHtml(task.deadline)}</span>`;
   };
 
+  const initials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  };
+
   const renderTaskMiniCard = (task) => `
-    <article class="task-board-card ${escapeHtml(task.priority)}">
+    <article class="task-board-card ${escapeHtml(task.priority)}" data-action="open-task-detail" data-task-id="${task.id}">
       <div class="task-board-title-row">
         <h5>${escapeHtml(task.title)}</h5>
-      <span class="task-count-badge ${escapeHtml(task.priority)}">${escapeHtml(String(task.comments || 0))}</span>
+        ${task.comments ? `<span class="task-count-badge ${isDueDateOverdue(task.dueDate || task.deadline) ? "overdue" : "active"}">${escapeHtml(String(task.comments))}</span>` : ""}
       </div>
       ${renderTaskBadge(task)}
       <div class="task-avatar-row">
-        <span class="task-avatar">👤</span>
-        <span class="task-arrow">›</span>
-        <span class="task-avatar">👤</span>
+        <span class="task-avatar-circle" title="${escapeHtml(task.creator || task.owner || "")}">${initials(task.creator || task.owner)}</span>
+        <span class="task-arrow-icon">&#8250;</span>
+        <span class="task-avatar-circle" title="${escapeHtml(task.assignee || task.owner || "")}">${initials(task.assignee || task.owner)}</span>
       </div>
     </article>
   `;
 
+  /* ====== LIST VIEW ====== */
   const renderListView = () => `
     <section class="task-surface fade-in">
       <div class="task-table-wrap">
         <table class="task-table bitrix-task-table">
           <thead>
             <tr>
-              <th class="checkbox-cell">☐</th>
+              <th class="checkbox-cell"><span class="th-checkbox">&#9744;</span></th>
+              <th class="gear-cell"><span class="th-gear">&#9881;</span></th>
               <th>Название</th>
-              <th class="active-col">Активность</th>
+              <th class="active-col">Активность &#8595;</th>
               <th>Крайний срок</th>
               <th>Постановщик</th>
               <th>Исполнитель</th>
@@ -3242,57 +3574,77 @@ function renderTasks() {
           <tbody>
             ${tasks
               .map(
-                (task) => `
-                <tr>
-                  <td class="checkbox-cell">☐</td>
-                  <td>
-                    <div class="task-list-title">${escapeHtml(task.title)}</div>
-                  </td>
-                  <td class="active-col">
-                    <div class="task-activity-wrap">
-                      <span class="task-signal-dot ${escapeHtml(task.priority)}">1</span>
-                      <span>${escapeHtml(task.activity || "")}</span>
-                    </div>
-                  </td>
-                  <td>${renderTaskBadge(task)}</td>
-                  <td><span class="person-chip">👤 ${escapeHtml(task.creator || task.owner || "")}</span></td>
-                  <td><span class="person-chip">👤 ${escapeHtml(task.assignee || task.owner || "")}</span></td>
-                  <td><span class="project-chip">👥 ${escapeHtml(task.project || "")}</span></td>
-                  <td>${escapeHtml(task.tags || "")}</td>
-                </tr>
-              `,
+                (task) => {
+                  const isOverdue = isDueDateOverdue(task.dueDate || task.deadline);
+                  return `
+                  <tr data-action="open-task-detail" data-task-id="${task.id}">
+                    <td class="checkbox-cell"><span class="row-checkbox">&#9744;</span></td>
+                    <td class="gear-cell"><span class="row-hamburger">&#9776;</span></td>
+                    <td>
+                      <div class="task-list-title">${escapeHtml(task.title)}</div>
+                    </td>
+                    <td class="active-col">
+                      <div class="task-activity-wrap">
+                        <span class="task-signal-dot ${isOverdue ? "overdue" : "active"}"></span>
+                        <span>${escapeHtml(task.activity || "")}</span>
+                      </div>
+                    </td>
+                    <td>${renderTaskBadge(task)}</td>
+                    <td>
+                      <span class="person-chip">
+                        <span class="task-avatar-circle small">${initials(task.creator || task.owner)}</span>
+                        ${escapeHtml(task.creator || task.owner || "")}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="person-chip">
+                        <span class="task-avatar-circle small">${initials(task.assignee || task.owner)}</span>
+                        ${escapeHtml(task.assignee || task.owner || "")}
+                      </span>
+                    </td>
+                    <td>
+                      ${task.project ? `<span class="project-chip"><span class="project-dot" style="background:${task.projectType === "project" ? "#5e88d7" : "#90d4d8"}"></span>${escapeHtml(task.project)}</span>` : ""}
+                    </td>
+                    <td>${escapeHtml(task.tags || "")}</td>
+                  </tr>`;
+                },
               )
               .join("")}
           </tbody>
         </table>
         <div class="task-table-footer">
-          <div>ОТМЕЧЕНО: 0 / ${tasks.length}</div>
+          <div>ОТМЕЧЕНО: 0/${tasks.length}</div>
           <div>ВСЕГО: <span>ПОКАЗАТЬ КОЛИЧЕСТВО</span></div>
           <div>СТРАНИЦЫ: 1</div>
           <div class="task-footer-right">НА СТРАНИЦЕ: <strong>50</strong></div>
         </div>
         <div class="task-table-actions">
-          <button class="task-muted-button" data-action="set-task-view" data-task-view="plan">ВЫБЕРИТЕ ДЕЙСТВИЕ</button>
-          <button class="task-primary-button" data-action="quick-capture">ПРИМЕНИТЬ</button>
+          <select class="task-action-select">
+            <option>ВЫБЕРИТЕ ДЕЙСТВИЕ</option>
+          </select>
+          <button class="task-apply-btn">ПРИМЕНИТЬ</button>
           <label class="task-check-all"><input type="checkbox" /> ДЛЯ ВСЕХ</label>
         </div>
       </div>
     </section>
   `;
 
+  /* ====== DEADLINES VIEW (7 columns by real dueDate) ====== */
   const renderDeadlinesView = () => `
     <section class="task-kanban-surface fade-in">
-      <div class="task-deadline-board">
+      <div class="task-deadline-board task-deadline-board-7">
         ${deadlineColumns
           .map((column) => {
-            const tasksByColumn = tasks.filter((task) => task.bucket === column.id);
+            const tasksByColumn = column.id === "done"
+              ? tasks.filter((t) => t.status === "done")
+              : tasks.filter((t) => t.status !== "done" && getDeadlineColumn(t) === column.id);
             return `
               <div class="task-deadline-column">
                 <div class="task-column-head ${escapeHtml(column.tone)}">
                   <strong>${escapeHtml(column.label)}</strong>
                   <span>(${tasksByColumn.length})</span>
                 </div>
-                <div class="task-column-plus">+</div>
+                <div class="task-column-plus" data-action="open-quick-task-dialog">+</div>
                 <div class="task-column-stack">
                   ${tasksByColumn.map(renderTaskMiniCard).join("")}
                 </div>
@@ -3304,31 +3656,41 @@ function renderTasks() {
     </section>
   `;
 
-  const renderPlanView = () => `
-    <section class="task-kanban-surface fade-in">
-      <div class="task-plan-board">
-        ${planColumns
-          .map((column) => {
-            const tasksByColumn = tasks.filter((task) => task.planBucket === column.id);
-            return `
+  /* ====== MY PLAN VIEW (2 columns) ====== */
+  const renderPlanView = () => {
+    const unscheduled = tasks.filter((t) => t.planBucket !== "doneweek");
+    const planned = tasks.filter((t) => t.planBucket === "doneweek");
+    const cols = [
+      { id: "unscheduled", label: "Не спланированы", tone: "salmon", items: unscheduled },
+      { id: "doneweek", label: "Сделаю на неделе", tone: "mint", items: planned },
+    ];
+    return `
+      <section class="task-kanban-surface fade-in">
+        <div class="task-plan-board">
+          ${cols
+            .map((column) => `
               <div class="task-plan-column">
                 <div class="task-column-head ${escapeHtml(column.tone)}">
                   <strong>${escapeHtml(column.label)}</strong>
-                  <span>(${tasksByColumn.length})</span>
+                  <span>(${column.items.length})</span>
                 </div>
-                <div class="task-column-plus">+</div>
-                ${column.id === "doneweek" ? '<div class="task-fast-add">✚ Быстрая задача</div>' : ""}
+                <div class="task-column-actions">
+                  <span class="task-column-plus" data-action="open-quick-task-dialog">+</span>
+                  <span class="task-column-dots">&#8226;&#8226;&#8226;</span>
+                </div>
+                ${column.id === "doneweek" ? '<div class="task-fast-add" data-action="open-quick-task-dialog">+ Быстрая задача</div>' : ""}
                 <div class="task-column-stack">
-                  ${tasksByColumn.map(renderTaskMiniCard).join("")}
+                  ${column.items.map(renderTaskMiniCard).join("")}
                 </div>
               </div>
-            `;
-          })
-          .join("")}
-      </div>
-    </section>
-  `;
+            `)
+            .join("")}
+        </div>
+      </section>
+    `;
+  };
 
+  /* ====== CALENDAR VIEW (kept as-is, already good) ====== */
   const renderCalendarView = () => {
     const year = state.ui.taskCalYear || new Date().getFullYear();
     const month = state.ui.taskCalMonth ?? new Date().getMonth();
@@ -3355,14 +3717,12 @@ function renderTasks() {
               if (!cell.current) {
                 return `<div class="task-calendar-cell task-cal-other"><span class="task-calendar-date">${cell.day}</span></div>`;
               }
-              // Find tasks with dueDate on this day
               const dayTasks = tasks.filter((t) => {
                 const dd = t.dueDate;
                 if (!dd) return false;
                 const d = new Date(dd);
                 return d.getFullYear() === year && d.getMonth() === month && d.getDate() === cell.day;
               });
-              // Find tasks that START on this day (multi-day)
               const startTasks = tasks.filter((t) => {
                 if (!t.startDate || !t.dueDate) return false;
                 const sd = new Date(t.startDate);
@@ -3391,45 +3751,91 @@ function renderTasks() {
     `;
   };
 
-  const renderGanttView = () => `
-    <section class="task-surface fade-in">
-      <div class="task-gantt-wrap">
-        <div class="task-gantt-sidebar">
-          <div class="task-gantt-sidebar-head">Задачи</div>
-          ${tasks
-            .map(
-              (task) => `
-                <div class="task-gantt-name ${escapeHtml(task.priority)}">
-                  ${escapeHtml(task.title)}
-                  <span class="task-count-badge ${escapeHtml(task.priority)}">1</span>
-                </div>
-              `,
-            )
-            .join("")}
-          <div class="task-gantt-pages">СТРАНИЦЫ: 1</div>
-        </div>
-        <div class="task-gantt-chart">
-          <div class="task-gantt-month">Апрель 2026</div>
-          <div class="task-gantt-days">
-            ${Array.from({ length: 22 }, (_, idx) => `<span>${idx + 1}</span>`).join("")}
-          </div>
-          <div class="task-gantt-rows">
+  /* ====== GANTT VIEW (real dueDate/startDate positions) ====== */
+  const renderGanttView = () => {
+    const ganttNow = new Date();
+    const ganttYear = ganttNow.getFullYear();
+    const ganttMonth = ganttNow.getMonth();
+    const daysInMonth = new Date(ganttYear, ganttMonth + 1, 0).getDate();
+    const todayDay = ganttNow.getDate();
+    const cellW = 42;
+    const monthNames = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+
+    function dayOfMonth(dateStr) {
+      if (!dateStr) return null;
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return null;
+        if (d.getFullYear() === ganttYear && d.getMonth() === ganttMonth) return d.getDate();
+        if (d < new Date(ganttYear, ganttMonth, 1)) return 0;
+        if (d > new Date(ganttYear, ganttMonth + 1, 0)) return daysInMonth + 1;
+        return null;
+      } catch { return null; }
+    }
+
+    return `
+      <section class="task-surface fade-in">
+        <div class="task-gantt-wrap">
+          <div class="task-gantt-sidebar">
+            <div class="task-gantt-sidebar-head">
+              <span>Задачи</span>
+              <span class="gantt-head-icons">&#128424; &#128269;</span>
+            </div>
             ${tasks
               .map(
-                (task) => `
-                  <div class="task-gantt-row">
-                    ${Array.from({ length: 22 }, (_, idx) => `<span class="task-gantt-cell ${idx + 1 === 6 ? "highlight" : ""}"></span>`).join("")}
-                    <div class="task-gantt-bar ${escapeHtml(task.priority)}" style="left:${(task.startDay - 1) * 48}px;width:${(task.endDay - task.startDay + 1) * 48}px"></div>
-                    <div class="task-gantt-marker ${escapeHtml(task.priority)}" style="left:${(task.doneDay - 1) * 48}px"></div>
-                  </div>
-                `,
+                (task) => {
+                  const isOver = isDueDateOverdue(task.dueDate || task.deadline);
+                  return `
+                  <div class="task-gantt-name ${isOver ? "overdue" : ""}">
+                    ${escapeHtml(task.title)}
+                    <span class="task-count-badge ${isOver ? "overdue" : "active"}">1</span>
+                  </div>`;
+                },
               )
               .join("")}
+            <div class="task-gantt-pages">СТРАНИЦЫ: 1</div>
+          </div>
+          <div class="task-gantt-chart">
+            <div class="task-gantt-month">${monthNames[ganttMonth]} ${ganttYear}</div>
+            <div class="task-gantt-days" style="grid-template-columns:repeat(${daysInMonth},${cellW}px)">
+              ${Array.from({ length: daysInMonth }, (_, idx) => {
+                const d = idx + 1;
+                const isWeekend = new Date(ganttYear, ganttMonth, d).getDay() % 6 === 0;
+                return `<span class="${d === todayDay ? "gantt-today" : ""} ${isWeekend ? "gantt-weekend" : ""}">${d}</span>`;
+              }).join("")}
+            </div>
+            <div class="task-gantt-rows">
+              ${tasks
+                .map(
+                  (task) => {
+                    const sd = dayOfMonth(task.startDate);
+                    const ed = dayOfMonth(task.dueDate || task.deadline);
+                    const startCol = sd !== null && sd >= 1 ? sd : 1;
+                    const endCol = ed !== null && ed >= 1 ? Math.min(ed, daysInMonth) : startCol + 2;
+                    const barLeft = (startCol - 1) * cellW;
+                    const barWidth = Math.max((endCol - startCol + 1) * cellW, cellW);
+                    const isOver = isDueDateOverdue(task.dueDate || task.deadline);
+                    const markerLeft = ed !== null && ed >= 1 && ed <= daysInMonth ? (ed - 1) * cellW + cellW - 3 : null;
+                    return `
+                    <div class="task-gantt-row" style="grid-template-columns:repeat(${daysInMonth},${cellW}px)">
+                      ${Array.from({ length: daysInMonth }, (_, idx) => {
+                        const d = idx + 1;
+                        return `<span class="task-gantt-cell ${d === todayDay ? "gantt-today-col" : ""}"></span>`;
+                      }).join("")}
+                      <div class="task-gantt-bar ${isOver ? "overdue" : ""}" style="left:${barLeft}px;width:${barWidth}px"></div>
+                      ${markerLeft !== null ? `<div class="task-gantt-marker" style="left:${markerLeft}px"></div>` : ""}
+                    </div>`;
+                  },
+                )
+                .join("")}
+            </div>
+            <!-- today vertical line -->
+            <div class="gantt-today-line" style="left:${(todayDay - 1) * cellW + cellW / 2}px"></div>
           </div>
         </div>
-      </div>
-    </section>
-  `;
+      </section>
+    `;
+  };
 
   const views = {
     list: renderListView,
@@ -3439,152 +3845,199 @@ function renderTasks() {
     gantt: renderGanttView,
   };
 
+  /* ====== MAIN SHELL ====== */
   return `
     <section class="task-shell fade-in">
 
-      <section class="panel task-intake-card">
-        <div class="page-head">
-          <div>
-            <h2>Быстрое создание задачи</h2>
-            <p>Короткая форма для мгновенного добавления задачи в текущий контур.</p>
-          </div>
+      <!-- Header bar: title + create + filters + search -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Мои задачи</h2>
+          <button class="task-create-btn" data-action="open-quick-task-dialog">
+            + Создать <span class="task-create-arrow">&#9662;</span>
+          </button>
         </div>
-        <form class="composer-card task-inline-form" data-form="add-task">
-          <div class="form-grid">
-            <div class="field">
-              <label for="taskTitle">Название</label>
-              <input id="taskTitle" name="title" placeholder="Например: закрыть CRM cleanup" />
-            </div>
-            <div class="field">
-              <label for="taskDescription">Описание</label>
-              <textarea id="taskDescription" name="description" placeholder="Что именно нужно довести до результата?"></textarea>
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="taskStatus">Статус</label>
-                <select id="taskStatus" name="status">
-                  <option value="backlog">backlog</option>
-                  <option value="active">active</option>
-                  <option value="review">review</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="taskPriority">Приоритет</label>
-                <select id="taskPriority" name="priority">
-                  <option value="low">low</option>
-                  <option value="medium">medium</option>
-                  <option value="high">high</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="taskDueDate">Крайний срок</label>
-                <input id="taskDueDate" name="dueDate" type="datetime-local" />
-              </div>
-            </div>
-            <button type="submit" class="primary-button">Добавить задачу</button>
-          </div>
-        </form>
-      </section>
-      <div class="task-toolbar-top">
-        <div class="task-role-row">
+        <div class="task-header-center">
           ${roleTabs
             .map(
               (item) => `
                 <button
-                  class="task-view-tab ${taskRole === item.id ? "is-active" : ""}"
+                  class="task-role-pill ${taskRole === item.id ? "is-active" : ""}"
                   data-action="set-task-role"
                   data-task-role="${item.id}"
-                >
-                  ${escapeHtml(item.label)}${item.id === "all" ? `<span class="pill-counter">${tasks.length}</span>` : ""}
-                </button>
+                >${escapeHtml(item.label)}${item.id === "all" ? `<span class="pill-counter">${tasks.length}</span>` : ""}</button>
               `,
             )
             .join("")}
-          <span class="task-search-chip small-tag">${escapeHtml(state.ui.query ? `Поиск: ${state.ui.query}` : "Поиск из верхней панели")}</span>
+          ${taskScope !== "all" ? `
+            <span class="task-scope-tag">
+              ${escapeHtml(scopeTabs.find(s => s.id === taskScope)?.label || taskScope)}
+              <button class="scope-tag-close" data-action="set-task-scope" data-task-scope="all">&times;</button>
+            </span>
+          ` : ""}
         </div>
-        <div class="task-role-row">
-          ${scopeTabs
-            .map(
-              (item) => `
-                <button
-                  class="task-view-tab ${taskScope === item.id ? "is-active" : ""}"
-                  data-action="set-task-scope"
-                  data-task-scope="${item.id}"
-                >
-                  ${escapeHtml(item.label)}
-                </button>
-              `,
-            )
-            .join("")}
-        </div>
-        <div class="task-view-tabs">
-          ${taskTabs
-            .map(
-              (tab) => `
-                <button class="task-view-tab ${tab.id === activeTaskView ? "is-active" : ""}" data-action="set-task-view" data-task-view="${tab.id}">${tab.label}</button>
-              `,
-            )
-            .join("")}
-        </div>
-        <div class="task-toolbar-actions">
-          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
+          </div>
         </div>
       </div>
-      <div class="task-signal-tabs">
-        ${signalTabs
+
+      <!-- Tab row: views + signal tabs -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${taskTabs
+            .map(
+              (tab) => `<button class="task-view-tab ${tab.id === activeTaskView ? "is-active" : ""}" data-action="set-task-view" data-task-view="${tab.id}">${tab.label}</button>`,
+            )
+            .join("")}
+        </div>
+        <div class="task-signal-tabs">
+          ${signalTabs
+            .map(
+              (tab) => `
+                <button
+                  class="task-signal-tab ${tab.tone}"
+                  data-action="${tab.action}"
+                  ${tab.route ? `data-route="${tab.route}"` : ""}
+                  ${tab.chatTab ? `data-chat-tab="${tab.chatTab}"` : ""}
+                  ${tab.taskView ? `data-task-view="${tab.taskView}"` : ""}
+                  ${tab.taskScope ? `data-task-scope="${tab.taskScope}"` : ""}
+                >${tab.value !== null ? `<span>${tab.value}</span>` : ""}${tab.label}</button>
+              `,
+            )
+            .join("")}
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Роботы</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Scope filter row -->
+      <div class="task-scope-row">
+        ${scopeTabs
           .map(
-            (tab) => `
+            (item) => `
               <button
-                class="task-signal-tab ${tab.tone}"
-                data-action="${tab.action}"
-                ${tab.route ? `data-route="${tab.route}"` : ""}
-                ${tab.chatTab ? `data-chat-tab="${tab.chatTab}"` : ""}
-                ${tab.taskView ? `data-task-view="${tab.taskView}"` : ""}
-              >${tab.value !== null ? `<span>${tab.value}</span>` : ""}${tab.label}</button>
+                class="task-scope-btn ${taskScope === item.id ? "is-active" : ""}"
+                data-action="set-task-scope"
+                data-task-scope="${item.id}"
+              >${escapeHtml(item.label)}</button>
             `,
           )
           .join("")}
       </div>
+
       ${views[activeTaskView] ? views[activeTaskView]() : renderListView()}
     </section>
   `;
 }
 
 function renderCompany() {
+  const companyTab = state.ui.companyTab || "all";
+  const companyScope = state.ui.companyScope || "all";
+  const tabDefs = [
+    { id: "all", label: "Все сотрудники" },
+    { id: "departments", label: "Отделы" },
+    { id: "invited", label: "Приглашённые" },
+  ];
+  const scopeDefs = [
+    { id: "all", label: "Все" },
+    { id: "active", label: "Активные" },
+    { id: "offline", label: "Офлайн" },
+  ];
+
+  const initials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
+  };
+
   return `
-    <section class="directory-grid fade-in">
-      ${state.people
-        .map(
-          (person) => `
-          <article class="person-card">
-            <h4>${escapeHtml(person.name)}</h4>
-            <div class="label-row">
-              <span class="small-tag">${escapeHtml(person.role)}</span>
-              <span class="status-pill active">${escapeHtml(person.state)}</span>
-            </div>
-            <p>${escapeHtml(person.focus)}</p>
-            <div class="hero-actions">
-              <button
-                class="ghost-button"
-                data-action="open-person-chat"
-                data-person="${escapeHtml(person.name)}"
-              >
-                Написать
-              </button>
-              <button
-                class="primary-button"
-                data-action="create-task"
-                data-title="${escapeHtml(`Задача: ${person.name}`)}"
-                data-description="${escapeHtml(`Согласовать шаг с ${person.name}.`)}"
-                data-tag="company"
-              >
-                Поставить задачу
-              </button>
-            </div>
-          </article>
-        `,
-        )
-        .join("")}
+    <section class="task-shell fade-in">
+
+      <!-- Header bar -->
+      <div class="task-header-bar">
+        <div class="task-header-left">
+          <h2 class="task-page-title"><span class="task-star">&#9733;</span> Сотрудники</h2>
+          <button class="task-create-btn" data-action="quick-capture">
+            + Пригласить
+          </button>
+        </div>
+        <div class="task-header-right">
+          <div class="task-header-search">
+            <span class="search-icon">&#128269;</span>
+            <span>${escapeHtml(state.ui.query || "Поиск")}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab row -->
+      <div class="task-tabs-row">
+        <div class="task-tabs-left">
+          ${tabDefs.map((tab) => `
+            <button class="task-view-tab ${companyTab === tab.id ? "is-active" : ""}" data-action="set-company-tab" data-company-tab="${tab.id}">${escapeHtml(tab.label)}</button>
+          `).join("")}
+        </div>
+        <div class="task-tabs-right">
+          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
+          <button class="task-toolbar-button">Маркетплейс</button>
+        </div>
+      </div>
+
+      <!-- Scope row -->
+      <div class="task-scope-row">
+        ${scopeDefs.map((s) => `
+          <button class="task-scope-btn ${companyScope === s.id ? "is-active" : ""}" data-action="set-company-scope" data-company-scope="${s.id}">${escapeHtml(s.label)}</button>
+        `).join("")}
+      </div>
+
+      <!-- Content: employees table -->
+      <section class="task-surface fade-in">
+        <div class="task-table-wrap">
+          <table class="task-table bitrix-task-table">
+            <thead>
+              <tr>
+                <th class="checkbox-cell"><span class="th-checkbox">&#9744;</span></th>
+                <th>Имя</th>
+                <th>Должность</th>
+                <th>Статус</th>
+                <th>Фокус</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.people.map((person) => `
+                <tr>
+                  <td class="checkbox-cell"><span class="row-checkbox">&#9744;</span></td>
+                  <td>
+                    <span class="person-chip">
+                      <span class="task-avatar-circle small">${initials(person.name)}</span>
+                      ${escapeHtml(person.name)}
+                    </span>
+                  </td>
+                  <td>${escapeHtml(person.role)}</td>
+                  <td><span class="status-pill active">${escapeHtml(person.state)}</span></td>
+                  <td>${escapeHtml(person.focus)}</td>
+                  <td class="label-row" style="gap:4px">
+                    <button class="ghost-button" data-action="open-person-chat" data-person="${escapeHtml(person.name)}">Написать</button>
+                    <button class="ghost-button" data-action="create-task" data-title="${escapeHtml("Задача: " + person.name)}" data-description="${escapeHtml("Согласовать шаг с " + person.name + ".")}" data-tag="company">Задачу</button>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+          <div class="task-table-footer">
+            <div>ОТМЕЧЕНО: 0/${state.people.length}</div>
+            <div>ВСЕГО: ${state.people.length}</div>
+            <div>СТРАНИЦЫ: 1</div>
+          </div>
+        </div>
+      </section>
+
     </section>
   `;
 }
@@ -3621,6 +4074,8 @@ function renderWorkspace(route) {
       <section class="workspace-body workspace-body-flat">
         ${renderDashboard(route)}
       </section>
+      ${renderQuickTaskDialog()}
+      ${renderFullTaskForm()}
     </main>
   `;
 }
@@ -4269,6 +4724,54 @@ function handleClick(event) {
     const postType = actionTarget.dataset.postType;
     if (postType) {
       commit((draft) => { draft.ui.groupFeedPostType = postType; });
+    }
+    return;
+  }
+
+  if (action === "set-feed-scope") {
+    const nextScope = actionTarget.dataset.feedScope;
+    if (nextScope) {
+      commit((draft) => { draft.ui.feedScope = nextScope; });
+    }
+    return;
+  }
+
+  if (action === "set-cal-scope") {
+    const nextScope = actionTarget.dataset.calScope;
+    if (nextScope) {
+      commit((draft) => { draft.ui.calScope = nextScope; });
+    }
+    return;
+  }
+
+  if (action === "set-mail-tab") {
+    const nextTab = actionTarget.dataset.mailTab;
+    if (nextTab) {
+      commit((draft) => { draft.ui.mailTab = nextTab; });
+    }
+    return;
+  }
+
+  if (action === "set-mail-scope") {
+    const nextScope = actionTarget.dataset.mailScope;
+    if (nextScope) {
+      commit((draft) => { draft.ui.mailScope = nextScope; });
+    }
+    return;
+  }
+
+  if (action === "set-company-tab") {
+    const nextTab = actionTarget.dataset.companyTab;
+    if (nextTab) {
+      commit((draft) => { draft.ui.companyTab = nextTab; });
+    }
+    return;
+  }
+
+  if (action === "set-company-scope") {
+    const nextScope = actionTarget.dataset.companyScope;
+    if (nextScope) {
+      commit((draft) => { draft.ui.companyScope = nextScope; });
     }
     return;
   }
