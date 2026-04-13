@@ -199,6 +199,8 @@ export const tasks = {
     title: string;
     description?: string;
     deadline?: string;
+    dueDate?: string;
+    startDate?: string;
     assignee?: string;
     project?: string;
     priority?: string;
@@ -218,6 +220,8 @@ export const tasks = {
     status: string;
     priority: string;
     deadline: string;
+    dueDate: string | null;
+    startDate: string | null;
     assignee: string;
     project: string;
     bucket: string;
@@ -230,6 +234,10 @@ export const tasks = {
 
   async remove(id: string) {
     return request<{ ok: boolean }>(`/tasks/${id}`, { method: "DELETE" });
+  },
+
+  async calendarMonth(month: string) {
+    return request<{ tasks: any[] }>(`/tasks/calendar/month?month=${encodeURIComponent(month)}`);
   },
 };
 
@@ -461,14 +469,14 @@ export const groups = {
     return request<{ tasks: any[] }>(`/groups/${groupId}/tasks${query}`);
   },
 
-  async createTask(groupId: string, data: { title: string; description?: string; priority?: string; deadline?: string; assignee?: string; kanbanStage?: string }) {
+  async createTask(groupId: string, data: { title: string; description?: string; priority?: string; deadline?: string; dueDate?: string; startDate?: string; assignee?: string; kanbanStage?: string }) {
     return request<{ task: any }>(`/groups/${groupId}/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  async updateTask(groupId: string, taskId: string, data: Partial<{ title: string; description: string; status: string; priority: string; deadline: string; kanbanStage: string; assignee: string }>) {
+  async updateTask(groupId: string, taskId: string, data: Partial<{ title: string; description: string; status: string; priority: string; deadline: string; dueDate: string | null; startDate: string | null; kanbanStage: string; assignee: string }>) {
     return request<{ task: any }>(`/groups/${groupId}/tasks/${taskId}`, {
       method: "PATCH",
       body: JSON.stringify(data),

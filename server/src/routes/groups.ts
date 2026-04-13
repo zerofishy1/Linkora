@@ -519,8 +519,13 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
       res.status(403).json({ error: "Только участники могут создавать задачи" }); return;
     }
 
-    const { title, description, priority, deadline, assignee, kanbanStage } = req.body;
+    const { title, description, priority, deadline, dueDate, startDate, assignee, kanbanStage } = req.body;
     if (!title?.trim()) { res.status(400).json({ error: "Название задачи обязательно" }); return; }
+
+    // Validate dates
+    if (dueDate && startDate && new Date(startDate) > new Date(dueDate)) {
+      res.status(400).json({ error: "Дата начала не может быть позже дедлайна" }); return;
+    }
 
     const userId = req.user!.userId;
     const wsId = req.user!.workspaceId!;
@@ -541,6 +546,8 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
         description: description || "",
         priority: priority || "medium",
         deadline: deadline || "",
+        dueDate: dueDate || null,
+        startDate: startDate || null,
         assignee: assignee || "",
         kanbanStage: kanbanStage || "new",
         ownerId: userId,
@@ -585,13 +592,15 @@ router.patch("/:id/tasks/:taskId", requireRole("admin", "member"), async (req: R
       res.status(403).json({ error: "Нет прав на редактирование задачи" }); return;
     }
 
-    const { title, description, status, priority, deadline, kanbanStage, assignee } = req.body;
+    const { title, description, status, priority, deadline, dueDate, startDate, kanbanStage, assignee } = req.body;
     const data: any = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (status !== undefined) data.status = status;
     if (priority !== undefined) data.priority = priority;
     if (deadline !== undefined) data.deadline = deadline;
+    if (dueDate !== undefined) data.dueDate = dueDate || null;
+    if (startDate !== undefined) data.startDate = startDate || null;
     if (kanbanStage !== undefined) data.kanbanStage = kanbanStage;
     if (assignee !== undefined) data.assignee = assignee;
 

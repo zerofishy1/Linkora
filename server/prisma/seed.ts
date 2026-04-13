@@ -76,8 +76,8 @@ async function main() {
 
   // ─── Tasks ───
   const tasks = [
-    { title: "Внедрении ии в тг канал", description: "Подключение канала и выпуск в рабочий контур.", status: "active", priority: "today", deadline: "10 апреля, 19:00", assignee: "Кирилл Морев", project: "Core delivery", tags: "operations", bucket: "today" },
-    { title: "Перенос рег.ру личного, на консалт", description: "Оформить трансфер домена и обновить DNS записи.", status: "active", priority: "medium", deadline: "11 месяца", assignee: "Хамид Мусаев", project: "Core delivery", tags: "admin", bucket: "week" },
+    { title: "Внедрении ии в тг канал", description: "Подключение канала и выпуск в рабочий контур.", status: "active", priority: "today", deadline: "10 апреля, 19:00", dueDate: "2026-04-15T19:00", startDate: "2026-04-10T09:00", assignee: "Кирилл Морев", project: "Core delivery", tags: "operations", bucket: "today" },
+    { title: "Перенос рег.ру личного, на консалт", description: "Оформить трансфер домена и обновить DNS записи.", status: "active", priority: "medium", deadline: "11 месяца", dueDate: "2026-04-20T18:00", assignee: "Хамид Мусаев", project: "Core delivery", tags: "admin", bucket: "week" },
   ];
   for (const t of tasks) {
     const chat = await prisma.chatThread.create({

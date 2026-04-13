@@ -385,6 +385,41 @@ function formatShortDate(dateStr) {
   } catch { return String(dateStr); }
 }
 
+function formatDueDate(dateStr) {
+  if (!dateStr) return "";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    const months = ["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+    const day = String(d.getDate()).padStart(2, "0");
+    const mon = months[d.getMonth()];
+    const h = d.getHours();
+    const m = d.getMinutes();
+    if (h === 0 && m === 0) return `${day} ${mon}`;
+    return `${day} ${mon}, ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  } catch { return String(dateStr); }
+}
+
+function isDueDateOverdue(dateStr) {
+  if (!dateStr) return false;
+  try {
+    return new Date(dateStr) < new Date();
+  } catch { return false; }
+}
+
+function getDueDateClass(dateStr) {
+  if (!dateStr) return "";
+  return isDueDateOverdue(dateStr) ? "overdue" : "upcoming";
+}
+
+function dueDateToISO(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 16);
+  } catch { return null; }
+}
+
 async function fetchWorkspaceData() {
   try {
     const [tasksRes, chatsRes, eventsRes, feedRes, mailRes, docsRes, groupsRes, peopleRes] = await Promise.allSettled([
@@ -409,6 +444,8 @@ async function fetchWorkspaceData() {
         status: t.status || "active",
         priority: t.priority || "medium",
         deadline: t.deadline || "",
+        dueDate: t.dueDate || null,
+        startDate: t.startDate || null,
         activity: formatDate(t.updatedAt),
         assignee: t.assignee || "",
         creator: t.assignee || "",
@@ -417,6 +454,7 @@ async function fetchWorkspaceData() {
         tags: t.tags || "",
         bucket: t.bucket || "week",
         planBucket: "unscheduled",
+        chatId: t.chatThread?.id || null,
         startDay: 1,
         endDay: 6,
         doneDay: 10,
@@ -941,8 +979,8 @@ function renderQuickTaskDialog() {
               </select>
             </div>
             <div class="field">
-              <label for="quickTaskDeadline">Крайний срок</label>
-              <input id="quickTaskDeadline" name="deadline" placeholder="10 апреля, 19:00" />
+              <label for="quickTaskDueDate">Крайний срок</label>
+              <input id="quickTaskDueDate" name="dueDate" type="datetime-local" />
             </div>
           </div>
           <div class="task-quick-chips">
@@ -1024,8 +1062,14 @@ function renderFullTaskForm() {
               </select>
             </div>
             <div class="field">
-              <label for="fullTaskDeadline">Крайний срок</label>
-              <input id="fullTaskDeadline" name="deadline" placeholder="10 апреля, 19:00" />
+              <label for="fullTaskDueDate">Крайний срок</label>
+              <input id="fullTaskDueDate" name="dueDate" type="datetime-local" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="fullTaskStartDate">Дата начала (необязательно)</label>
+              <input id="fullTaskStartDate" name="startDate" type="datetime-local" />
             </div>
           </div>
           <div class="task-full-form-sections">
@@ -1165,7 +1209,7 @@ function renderTaskChatView() {
                     >
                       <div class="thread-avatar task-thread-avatar">${escapeHtml(initials)}</div>
                       <div class="thread-content">
-                        <div class="thread-title"><strong>${escapeHtml(task.title)}</strong><span>${escapeHtml(task.deadline || "")}</span></div>
+                        <div class="thread-title"><strong>${escapeHtml(task.title)}</strong><span>${task.dueDate ? formatDueDate(task.dueDate) : escapeHtml(task.deadline || "")}</span></div>
                         <div class="thread-snippet">${escapeHtml(task.description || "")}</div>
                       </div>
                       <span class="task-status-dot ${escapeHtml(task.priority)}"></span>
@@ -1182,10 +1226,10 @@ function renderTaskChatView() {
           ? `
             <div class="pane-head">
               <h3>${escapeHtml(selectedTask.title)}</h3>
-              <p>${escapeHtml(selectedTask.assignee || selectedTask.owner || "")} · ${escapeHtml(selectedTask.deadline || "без срока")}</p>
+              <p>${escapeHtml(selectedTask.assignee || selectedTask.owner || "")} · ${selectedTask.dueDate ? formatDueDate(selectedTask.dueDate) : escapeHtml(selectedTask.deadline || "без срока")}</p>
             </div>
             <div class="task-chat-meta">
-              <span class="task-deadline-pill ${selectedTask.priority === "overdue" ? "overdue" : "upcoming"}">${escapeHtml(selectedTask.deadline || "без срока")}</span>
+              <span class="task-deadline-pill ${getDueDateClass(selectedTask.dueDate || selectedTask.deadline) || "upcoming"}">${selectedTask.dueDate ? formatDueDate(selectedTask.dueDate) : escapeHtml(selectedTask.deadline || "без срока")}</span>
               <span class="small-tag">${escapeHtml(selectedTask.status)}</span>
               <span class="small-tag">${escapeHtml(selectedTask.project || "")}</span>
             </div>
@@ -2160,9 +2204,15 @@ function renderGroupTasksSection() {
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="gdTaskDeadline">Крайний срок</label>
-              <input id="gdTaskDeadline" name="deadline" type="date" />
+              <label for="gdTaskDueDate">Крайний срок</label>
+              <input id="gdTaskDueDate" name="dueDate" type="datetime-local" />
             </div>
+            <div class="field">
+              <label for="gdTaskStartDate">Дата начала</label>
+              <input id="gdTaskStartDate" name="startDate" type="datetime-local" />
+            </div>
+          </div>
+          <div class="field-row">
             <div class="field">
               <label for="gdTaskStage">Стадия</label>
               <select id="gdTaskStage" name="kanbanStage">
@@ -2214,7 +2264,7 @@ function renderGroupTasksSection() {
                 <td><strong>${escapeHtml(t.title)}</strong></td>
                 <td><span class="gd-stage-badge ${getKanbanStageColor(t.kanbanStage)}">${getKanbanStageLabel(t.kanbanStage)}</span></td>
                 <td class="gd-td-activity">${formatDate(t.updatedAt || t.createdAt)}</td>
-                <td>${t.deadline ? `<span class="task-deadline-pill ${new Date(t.deadline) < new Date() ? "overdue" : "upcoming"}">${formatShortDate(t.deadline)}</span>` : "—"}</td>
+                <td>${(t.dueDate || t.deadline) ? `<span class="task-deadline-pill ${getDueDateClass(t.dueDate || t.deadline)}">${formatDueDate(t.dueDate || t.deadline)}</span>` : "—"}</td>
                 <td><span class="person-chip">${escapeHtml(typeof t.creator === "object" ? (t.creator?.name || "") : (t.creator || ""))}</span></td>
                 <td><span class="person-chip">${escapeHtml(typeof t.assignee === "object" ? (t.assignee?.name || "") : (t.assignee || ""))}</span></td>
               </tr>
@@ -2242,7 +2292,7 @@ function renderGroupTasksSection() {
                 ${stageTasks.map((t) => `
                   <div class="gd-kanban-card" data-action="open-group-task" data-task-id="${t.id}">
                     <div class="gd-kanban-card-title">${escapeHtml(t.title)}</div>
-                    ${t.deadline ? `<div class="gd-kanban-card-deadline"><span class="task-deadline-pill ${new Date(t.deadline) < new Date() ? "overdue" : "upcoming"}">${formatShortDate(t.deadline)}</span></div>` : ""}
+                    ${(t.dueDate || t.deadline) ? `<div class="gd-kanban-card-deadline"><span class="task-deadline-pill ${getDueDateClass(t.dueDate || t.deadline)}">${formatDueDate(t.dueDate || t.deadline)}</span></div>` : ""}
                     <div class="gd-kanban-card-assignee">
                       <span class="gd-mini-avatar">${(t.assignee || "?").charAt(0)}</span>
                       <span>${escapeHtml(t.assignee || "")}</span>
@@ -2264,11 +2314,12 @@ function renderGroupTasksSection() {
     const endOfWeek = new Date(today);
     endOfWeek.setDate(today.getDate() + (7 - today.getDay()));
 
+    const getDD = (t) => t.dueDate || t.deadline;
     const buckets = [
-      { id: "overdue", label: "Просрочено", tone: "gd-bucket-red", filter: (t) => t.deadline && new Date(t.deadline) < today },
-      { id: "today", label: "Сегодня", tone: "gd-bucket-green", filter: (t) => { if (!t.deadline) return false; const d = new Date(t.deadline); return d >= today && d < new Date(today.getTime() + 86400000); } },
-      { id: "week", label: "На этой неделе", tone: "gd-bucket-blue", filter: (t) => { if (!t.deadline) return false; const d = new Date(t.deadline); return d >= new Date(today.getTime() + 86400000) && d <= endOfWeek; } },
-      { id: "later", label: "Позже", tone: "gd-bucket-gray", filter: (t) => { if (!t.deadline) return true; return new Date(t.deadline) > endOfWeek; } },
+      { id: "overdue", label: "Просрочено", tone: "gd-bucket-red", filter: (t) => getDD(t) && new Date(getDD(t)) < today },
+      { id: "today", label: "Сегодня", tone: "gd-bucket-green", filter: (t) => { const dd = getDD(t); if (!dd) return false; const d = new Date(dd); return d >= today && d < new Date(today.getTime() + 86400000); } },
+      { id: "week", label: "На этой неделе", tone: "gd-bucket-blue", filter: (t) => { const dd = getDD(t); if (!dd) return false; const d = new Date(dd); return d >= new Date(today.getTime() + 86400000) && d <= endOfWeek; } },
+      { id: "later", label: "Позже", tone: "gd-bucket-gray", filter: (t) => { const dd = getDD(t); if (!dd) return true; return new Date(dd) > endOfWeek; } },
     ];
 
     return `
@@ -2285,7 +2336,7 @@ function renderGroupTasksSection() {
                 ${bucketTasks.map((t) => `
                   <div class="gd-kanban-card" data-action="open-group-task" data-task-id="${t.id}">
                     <div class="gd-kanban-card-title">${escapeHtml(t.title)}</div>
-                    ${t.deadline ? `<div class="gd-kanban-card-deadline">${formatShortDate(t.deadline)}</div>` : ""}
+                    ${(t.dueDate || t.deadline) ? `<div class="gd-kanban-card-deadline"><span class="task-deadline-pill ${getDueDateClass(t.dueDate || t.deadline)}">${formatDueDate(t.dueDate || t.deadline)}</span></div>` : ""}
                     <div class="gd-kanban-card-assignee"><span class="gd-mini-avatar">${(t.assignee || "?").charAt(0)}</span></div>
                   </div>
                 `).join("")}
@@ -2335,6 +2386,36 @@ function renderGroupTasksSection() {
     const year = state.ui.groupCalendarYear || new Date().getFullYear();
     const month = state.ui.groupCalendarMonth ?? new Date().getMonth();
     const grid = getCalendarGrid(year, month);
+    const todayDate = new Date();
+
+    // Helper: does task fall on a specific date?
+    const taskOnDate = (t, y, m, d) => {
+      const dd = t.dueDate || t.deadline;
+      const sd = t.startDate;
+      if (!dd && !sd) return { hit: false };
+      const cellDate = new Date(y, m, d);
+      const cellEnd = new Date(y, m, d, 23, 59, 59);
+      const dueD = dd ? new Date(dd) : null;
+      const startD = sd ? new Date(sd) : null;
+
+      // Multi-day task (has both start and due): show as bar
+      if (startD && dueD) {
+        const sDay = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate());
+        const eDay = new Date(dueD.getFullYear(), dueD.getMonth(), dueD.getDate());
+        if (cellDate >= sDay && cellDate <= eDay) {
+          const isStart = cellDate.getTime() === sDay.getTime();
+          const isEnd = cellDate.getTime() === eDay.getTime();
+          return { hit: true, bar: true, isStart, isEnd };
+        }
+        return { hit: false };
+      }
+      // Single-day task (only dueDate): show as dot
+      if (dueD && dueD.getFullYear() === y && dueD.getMonth() === m && dueD.getDate() === d) {
+        return { hit: true, bar: false };
+      }
+      return { hit: false };
+    };
+
     return `
       <div class="gd-task-calendar">
         <div class="gd-cal-head">
@@ -2351,15 +2432,25 @@ function renderGroupTasksSection() {
           ${grid.map((week) => `
             <div class="gd-cal-week">
               ${week.map((cell) => {
-                const dayTasks = cell.current ? tasks.filter((t) => {
-                  if (!t.deadline) return false;
-                  const d = new Date(t.deadline);
-                  return d.getFullYear() === year && d.getMonth() === month && d.getDate() === cell.day;
-                }) : [];
+                if (!cell.current) return `<div class="gd-cal-cell gd-cal-other"><span class="gd-cal-date">${cell.day}</span></div>`;
+                const isToday = cell.day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+                const dayItems = tasks.map(t => ({ task: t, ...taskOnDate(t, year, month, cell.day) })).filter(r => r.hit);
+
                 return `
-                  <div class="gd-cal-cell ${cell.current ? "" : "gd-cal-other"}">
+                  <div class="gd-cal-cell ${isToday ? "gd-cal-today" : ""}">
                     <span class="gd-cal-date">${cell.day}</span>
-                    ${dayTasks.map((t) => `<div class="gd-cal-pill" title="${escapeHtml(t.title)}">${escapeHtml(t.title.slice(0, 12))}${t.title.length > 12 ? "..." : ""}</div>`).join("")}
+                    ${dayItems.map((r) => {
+                      if (r.bar) {
+                        const cls = ["gd-cal-bar"];
+                        if (r.isStart) cls.push("gd-cal-bar-start");
+                        if (r.isEnd) cls.push("gd-cal-bar-end");
+                        if (!r.isStart && !r.isEnd) cls.push("gd-cal-bar-mid");
+                        if (isDueDateOverdue(r.task.dueDate)) cls.push("gd-cal-bar-overdue");
+                        return `<div class="${cls.join(" ")}" title="${escapeHtml(r.task.title)}" data-action="open-group-task" data-task-id="${r.task.id}">${r.isStart ? escapeHtml(r.task.title.slice(0, 10)) : ""}</div>`;
+                      }
+                      const pillCls = isDueDateOverdue(r.task.dueDate) ? "gd-cal-pill overdue" : "gd-cal-pill";
+                      return `<div class="${pillCls}" title="${escapeHtml(r.task.title)}" data-action="open-group-task" data-task-id="${r.task.id}"><span class="gd-cal-dot"></span>${escapeHtml(r.task.title.slice(0, 10))}${r.task.title.length > 10 ? "..." : ""}</div>`;
+                    }).join("")}
                   </div>
                 `;
               }).join("")}
@@ -2372,7 +2463,7 @@ function renderGroupTasksSection() {
 
   const renderOverdueView = () => {
     const now = new Date();
-    const overdueTasks = tasks.filter((t) => t.deadline && new Date(t.deadline) < now && (t.kanbanStage || "new") !== "done");
+    const overdueTasks = tasks.filter((t) => { const dd = t.dueDate || t.deadline; return dd && new Date(dd) < now && (t.kanbanStage || "new") !== "done"; });
     if (overdueTasks.length === 0) {
       return `<div class="gd-empty">Просроченных задач нет.</div>`;
     }
@@ -2391,7 +2482,7 @@ function renderGroupTasksSection() {
             ${overdueTasks.map((t) => `
               <tr class="gd-task-row" data-action="open-group-task" data-task-id="${t.id}">
                 <td><strong>${escapeHtml(t.title)}</strong></td>
-                <td><span class="task-deadline-pill overdue">${formatShortDate(t.deadline)}</span></td>
+                <td><span class="task-deadline-pill overdue">${formatDueDate(t.dueDate || t.deadline)}</span></td>
                 <td><span class="person-chip">${escapeHtml(t.assignee || "")}</span></td>
                 <td><span class="gd-stage-badge ${getKanbanStageColor(t.kanbanStage)}">${getKanbanStageLabel(t.kanbanStage)}</span></td>
               </tr>
@@ -2628,6 +2719,7 @@ function renderGroupCalendarSection() {
   const year = state.ui.groupCalendarYear || new Date().getFullYear();
   const month = state.ui.groupCalendarMonth ?? new Date().getMonth();
   const events = state.ui.groupEvents || [];
+  const groupTasks = (state.ui.groupTasks || []).filter(t => t.dueDate || t.startDate);
 
   const viewTabs = [
     { id: "day", label: "День" },
@@ -2664,16 +2756,25 @@ function renderGroupCalendarSection() {
         ${grid.map((week) => `
           <div class="gd-cal-week">
             ${week.map((cell) => {
-              const dayEvents = cell.current ? events.filter((e) => {
+              if (!cell.current) return `<div class="gd-cal-cell gd-cal-other"><span class="gd-cal-date">${cell.day}</span></div>`;
+              const dayEvents = events.filter((e) => {
                 if (!e.date) return false;
                 const d = new Date(e.date);
                 return d.getFullYear() === year && d.getMonth() === month && d.getDate() === cell.day;
-              }) : [];
-              const isToday = cell.current && cell.day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+              });
+              // Tasks with dueDate on this day
+              const dayTasks = groupTasks.filter((t) => {
+                const dd = t.dueDate;
+                if (!dd) return false;
+                const d = new Date(dd);
+                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === cell.day;
+              });
+              const isToday = cell.day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
               return `
-                <div class="gd-cal-cell ${cell.current ? "" : "gd-cal-other"} ${isToday ? "gd-cal-today" : ""}">
+                <div class="gd-cal-cell ${isToday ? "gd-cal-today" : ""}">
                   <span class="gd-cal-date">${cell.day}</span>
                   ${dayEvents.map((e) => `<div class="gd-cal-event-pill" title="${escapeHtml(e.title)}">${escapeHtml(e.title.slice(0, 10))}${e.title.length > 10 ? "..." : ""}</div>`).join("")}
+                  ${dayTasks.map((t) => `<div class="gd-cal-pill ${isDueDateOverdue(t.dueDate) ? "overdue" : ""}" title="Задача: ${escapeHtml(t.title)}" data-action="open-group-task" data-task-id="${t.id}"><span class="gd-cal-dot"></span>${escapeHtml(t.title.slice(0, 10))}${t.title.length > 10 ? "..." : ""}</div>`).join("")}
                 </div>
               `;
             }).join("")}
@@ -2965,12 +3066,28 @@ function renderGroupTaskDetailOverlay() {
                   <span class="person-chip">${escapeHtml(typeof task.creator === "object" ? (task.creator?.name || "") : (task.creator || ""))}</span>
                 </div>
                 <div class="gd-task-detail-field">
-                  <label>Срок</label>
-                  <span>${task.deadline ? formatShortDate(task.deadline) : "Не указан"}</span>
+                  <label>Крайний срок</label>
+                  ${(task.dueDate || task.deadline) ? `<span class="task-deadline-pill ${getDueDateClass(task.dueDate || task.deadline)}">${formatDueDate(task.dueDate || task.deadline)}</span>` : `<span style="color:var(--muted)">Не указан</span>`}
                 </div>
+                ${task.startDate ? `
+                <div class="gd-task-detail-field">
+                  <label>Дата начала</label>
+                  <span>${formatDueDate(task.startDate)}</span>
+                </div>
+                ` : ""}
+                ${(task.startDate && task.dueDate) ? `
+                <div class="gd-task-detail-field">
+                  <label>Длительность</label>
+                  <span>${Math.ceil((new Date(task.dueDate).getTime() - new Date(task.startDate).getTime()) / 86400000)} дн.</span>
+                </div>
+                ` : ""}
                 <div class="gd-task-detail-field">
                   <label>Приоритет</label>
                   <span class="small-tag">${escapeHtml(task.priority || "medium")}</span>
+                </div>
+                <div class="gd-task-detail-field gd-task-date-edit">
+                  <label>Изменить срок</label>
+                  <input type="datetime-local" value="${task.dueDate || ""}" data-action="change-task-due-date" data-task-id="${task.id}" data-group-id="${g ? g.id : ""}" />
                 </div>
               </div>
             </div>
@@ -3085,10 +3202,10 @@ function renderTasks() {
   ];
 
   const renderTaskBadge = (task) => {
-    if (task.priority === "overdue") {
-      return `<span class="task-deadline-pill overdue">${escapeHtml(task.deadline)}</span>`;
-    }
-    return `<span class="task-deadline-pill upcoming">${escapeHtml(task.deadline)}</span>`;
+    const dd = task.dueDate || task.deadline;
+    if (!dd || dd === "без даты") return `<span class="task-deadline-pill" style="opacity:.5">без срока</span>`;
+    const cls = isDueDateOverdue(dd) ? "overdue" : "upcoming";
+    return `<span class="task-deadline-pill ${cls}">${task.dueDate ? formatDueDate(task.dueDate) : escapeHtml(task.deadline)}</span>`;
   };
 
   const renderTaskMiniCard = (task) => `
@@ -3213,33 +3330,61 @@ function renderTasks() {
   `;
 
   const renderCalendarView = () => {
-    const days = Array.from({ length: 35 }, (_, index) => index - 1);
+    const year = state.ui.taskCalYear || new Date().getFullYear();
+    const month = state.ui.taskCalMonth ?? new Date().getMonth();
+    const grid = getCalendarGrid(year, month);
+    const todayDate = new Date();
+
     return `
       <section class="task-surface fade-in">
         <div class="task-calendar-wrap">
           <div class="task-calendar-head">
-            <h3>Апрель, 2026</h3>
-            <div class="task-calendar-controls">Месяц <span>‹</span> Сегодня <span>›</span></div>
+            <h3>${getMonthName(month)}, ${year}</h3>
+            <div class="task-calendar-controls">
+              <button class="ghost-button" data-action="task-cal-prev">&#8249;</button>
+              <button class="ghost-button" data-action="task-cal-today">Сегодня</button>
+              <button class="ghost-button" data-action="task-cal-next">&#8250;</button>
+            </div>
           </div>
           <div class="task-calendar-weekdays">
             <span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>вс</span>
           </div>
           <div class="task-calendar-grid">
-            ${days
-              .map((day, index) => {
-                const labels = [30, 31, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 1, 2, 3];
-                const label = labels[index];
-                const event = label === 10 ? '<div class="task-calendar-event"><span class="dot"></span>Внедрении ии в тг ка... <small>19:00</small></div>' : '';
-                const marker = label === 6 ? '<span class="task-calendar-badge">6</span>' : '';
-                return `
-                  <div class="task-calendar-cell ${label === 6 ? "selected" : ""}">
-                    <span class="task-calendar-date">${label}</span>
-                    ${marker}
-                    ${event}
-                  </div>
-                `;
-              })
-              .join("")}
+            ${grid.map((week) => week.map((cell) => {
+              const isToday = cell.current && cell.day === todayDate.getDate() && month === todayDate.getMonth() && year === todayDate.getFullYear();
+              if (!cell.current) {
+                return `<div class="task-calendar-cell task-cal-other"><span class="task-calendar-date">${cell.day}</span></div>`;
+              }
+              // Find tasks with dueDate on this day
+              const dayTasks = tasks.filter((t) => {
+                const dd = t.dueDate;
+                if (!dd) return false;
+                const d = new Date(dd);
+                return d.getFullYear() === year && d.getMonth() === month && d.getDate() === cell.day;
+              });
+              // Find tasks that START on this day (multi-day)
+              const startTasks = tasks.filter((t) => {
+                if (!t.startDate || !t.dueDate) return false;
+                const sd = new Date(t.startDate);
+                return sd.getFullYear() === year && sd.getMonth() === month && sd.getDate() === cell.day;
+              });
+              return `
+                <div class="task-calendar-cell ${isToday ? "selected" : ""}">
+                  <span class="task-calendar-date">${cell.day}</span>
+                  ${dayTasks.length ? `<span class="task-calendar-badge">${dayTasks.length}</span>` : ""}
+                  ${dayTasks.map((t) => `
+                    <div class="task-calendar-event ${isDueDateOverdue(t.dueDate) ? "overdue" : ""}">
+                      <span class="dot"></span>${escapeHtml(t.title.slice(0, 16))}${t.title.length > 16 ? "..." : ""} <small>${new Date(t.dueDate).getHours() ? String(new Date(t.dueDate).getHours()).padStart(2,"0") + ":" + String(new Date(t.dueDate).getMinutes()).padStart(2,"0") : ""}</small>
+                    </div>
+                  `).join("")}
+                  ${startTasks.filter(st => !dayTasks.find(dt => dt.id === st.id)).map((t) => `
+                    <div class="task-calendar-event start-marker">
+                      <span class="dot" style="background:var(--accent)"></span>${escapeHtml(t.title.slice(0, 12))}... <small>начало</small>
+                    </div>
+                  `).join("")}
+                </div>
+              `;
+            }).join("")).join("")}
           </div>
         </div>
       </section>
@@ -3332,8 +3477,8 @@ function renderTasks() {
                 </select>
               </div>
               <div class="field">
-                <label for="taskDeadline">Дедлайн</label>
-                <input id="taskDeadline" name="deadline" placeholder="13 апр" />
+                <label for="taskDueDate">Крайний срок</label>
+                <input id="taskDueDate" name="dueDate" type="datetime-local" />
               </div>
             </div>
             <button type="submit" class="primary-button">Добавить задачу</button>
@@ -3976,6 +4121,34 @@ function handleClick(event) {
     return;
   }
 
+  if (action === "change-task-due-date") {
+    const taskId = actionTarget.dataset.taskId;
+    const groupId = actionTarget.dataset.groupId;
+    const newDueDate = actionTarget.value || null; // datetime-local value or empty
+    if (taskId) {
+      const deadline = newDueDate ? formatDueDate(newDueDate) : "";
+      const updateFn = groupId
+        ? api.groups.updateTask(groupId, taskId, { dueDate: newDueDate, deadline })
+        : api.tasks.update(taskId, { dueDate: newDueDate, deadline });
+      updateFn.then(() => {
+        commit((draft) => {
+          // Update in group tasks
+          const gt = (draft.ui.groupTasks || []).find((tk) => tk.id === taskId);
+          if (gt) { gt.dueDate = newDueDate; gt.deadline = deadline; }
+          // Update in main tasks
+          const mt = (draft.tasks || []).find((tk) => tk.id === taskId);
+          if (mt) { mt.dueDate = newDueDate; mt.deadline = deadline; }
+          // Update active task overlay
+          if (draft.ui.activeGroupTask && draft.ui.activeGroupTask.id === taskId) {
+            draft.ui.activeGroupTask.dueDate = newDueDate;
+            draft.ui.activeGroupTask.deadline = deadline;
+          }
+        });
+      }).catch(() => {});
+    }
+    return;
+  }
+
   if (action === "set-group-calendar-view") {
     const calView = actionTarget.dataset.calendarView;
     if (calView) {
@@ -4056,6 +4229,38 @@ function handleClick(event) {
       if (m > 11) { m = 0; y++; }
       draft.ui.groupCalendarMonth = m;
       draft.ui.groupCalendarYear = y;
+    });
+    return;
+  }
+
+  if (action === "task-cal-prev") {
+    commit((draft) => {
+      let m = draft.ui.taskCalMonth ?? new Date().getMonth();
+      let y = draft.ui.taskCalYear || new Date().getFullYear();
+      m--;
+      if (m < 0) { m = 11; y--; }
+      draft.ui.taskCalMonth = m;
+      draft.ui.taskCalYear = y;
+    });
+    return;
+  }
+
+  if (action === "task-cal-next") {
+    commit((draft) => {
+      let m = draft.ui.taskCalMonth ?? new Date().getMonth();
+      let y = draft.ui.taskCalYear || new Date().getFullYear();
+      m++;
+      if (m > 11) { m = 0; y++; }
+      draft.ui.taskCalMonth = m;
+      draft.ui.taskCalYear = y;
+    });
+    return;
+  }
+
+  if (action === "task-cal-today") {
+    commit((draft) => {
+      draft.ui.taskCalMonth = new Date().getMonth();
+      draft.ui.taskCalYear = new Date().getFullYear();
     });
     return;
   }
@@ -4542,11 +4747,18 @@ function handleSubmit(event) {
     if (!title || !groupId) return;
     const description = String(formData.get("description") || "").trim();
     const priority = String(formData.get("priority") || "medium");
-    const deadline = String(formData.get("deadline") || "");
+    const dueDate = String(formData.get("dueDate") || "");
+    const startDate = String(formData.get("startDate") || "");
+    const deadline = dueDate ? formatDueDate(dueDate) : "";
     const assignee = String(formData.get("assignee") || state.profile.name);
     const kanbanStage = String(formData.get("kanbanStage") || "new");
 
-    api.groups.createTask(groupId, { title, description, priority, deadline, assignee, kanbanStage }).then((data) => {
+    if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
+      alert("Дата начала не может быть позже крайнего срока");
+      return;
+    }
+
+    api.groups.createTask(groupId, { title, description, priority, deadline, dueDate: dueDate || undefined, startDate: startDate || undefined, assignee, kanbanStage }).then((data) => {
       commit((draft) => {
         if (!draft.ui.groupTasks) draft.ui.groupTasks = [];
         draft.ui.groupTasks.unshift(data.task);
@@ -4655,35 +4867,49 @@ function handleSubmit(event) {
   if (form.dataset.form === "add-task") {
     const title = String(formData.get("title") || "").trim();
     const description = String(formData.get("description") || "").trim();
-    if (!title || !description) {
-      return;
-    }
+    if (!title || !description) return;
 
-    commit((draft) => {
-      const status = String(formData.get("status") || "backlog");
-      const priority = String(formData.get("priority") || "medium");
-      draft.tasks.unshift({
-        id: createId("task"),
-        title,
-        description,
-        status,
-        priority,
-        deadline: String(formData.get("deadline") || "без даты"),
-        owner: draft.profile.name,
-        assignee: draft.profile.name,
-        creator: draft.profile.name,
-        project: "Внутрянка Консалт",
-        projectType: "group",
-        tags: "manual",
-        bucket: priority === "high" ? "today" : "none",
-        planBucket: "unscheduled",
-        startDay: 1,
-        endDay: 2,
-        doneDay: 3,
-        comments: 0,
+    const status = String(formData.get("status") || "backlog");
+    const priority = String(formData.get("priority") || "medium");
+    const dueDate = String(formData.get("dueDate") || "");
+    const deadline = dueDate ? formatDueDate(dueDate) : "без даты";
+
+    api.tasks.create({
+      title, description, status, priority,
+      dueDate: dueDate || undefined,
+      deadline,
+      assignee: state.profile.name,
+    }).then((data) => {
+      const t = data.task;
+      commit((draft) => {
+        draft.tasks.unshift({
+          id: t.id,
+          title: t.title,
+          description: t.description || "",
+          status: t.status || status,
+          priority: t.priority || priority,
+          deadline: t.deadline || deadline,
+          dueDate: t.dueDate || dueDate || null,
+          startDate: t.startDate || null,
+          activity: "Сейчас",
+          owner: draft.profile.name,
+          assignee: t.assignee || draft.profile.name,
+          creator: draft.profile.name,
+          project: t.project || "",
+          projectType: "group",
+          tags: t.tags || "manual",
+          bucket: t.bucket || (priority === "high" ? "today" : "none"),
+          planBucket: "unscheduled",
+          chatId: t.chatThreadId || null,
+          startDay: 1,
+          endDay: 2,
+          doneDay: 3,
+          comments: 0,
+        });
+        draft.metrics.openTasks = draft.tasks.filter((task) => task.status !== "done").length;
       });
-      draft.metrics.openTasks = draft.tasks.filter((task) => task.status !== "done").length;
-    });
+      form.reset();
+    }).catch((err) => console.error("Task create error:", err));
     return;
   }
 
@@ -4692,68 +4918,98 @@ function handleSubmit(event) {
     if (!title) return;
     const description = String(formData.get("description") || "").trim();
     const assignee = String(formData.get("assignee") || state.profile.name);
-    const deadline = String(formData.get("deadline") || "без даты");
+    const dueDate = String(formData.get("dueDate") || "");
+    const startDate = String(formData.get("startDate") || "");
+    const deadline = dueDate ? formatDueDate(dueDate) : "без даты";
     const isQuick = form.dataset.form === "quick-add-task";
     const projectId = isQuick ? state.ui.quickTaskProject : state.ui.fullTaskProject;
     const projectGroup = projectId ? state.groups.find(g => g.id === projectId) : null;
     const projectName = projectGroup ? projectGroup.title : "Внутрянка Консалт";
     const files = isQuick ? [...state.ui.quickTaskFiles] : [...state.ui.fullTaskFiles];
 
-    commit((draft) => {
-      const taskId = createId("task");
-      const chatId = createId("chat");
-      draft.tasks.unshift({
-        id: taskId,
-        title,
-        description,
-        status: "active",
-        priority: "today",
-        deadline,
-        owner: draft.profile.name,
-        assignee,
-        creator: draft.profile.name,
-        project: projectName,
-        projectType: "group",
-        tags: "manual",
-        bucket: "today",
-        planBucket: "unscheduled",
-        startDay: 1,
-        endDay: 2,
-        doneDay: 3,
-        comments: 0,
-        chatId,
-        files,
+    if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
+      alert("Дата начала не может быть позже крайнего срока");
+      return;
+    }
+
+    // Call real API to create task on the server
+    const createPayload: any = {
+      title,
+      description,
+      assignee,
+      dueDate: dueDate || undefined,
+      startDate: startDate || undefined,
+      deadline,
+      project: projectName,
+      priority: "today",
+      createChat: true,
+      files: files.map(f => ({ filename: f, source: "upload" })),
+    };
+
+    // If a project group is selected, create in that group instead
+    const createPromise = projectId
+      ? api.groups.createTask(projectId, { title, description, priority: "medium", dueDate: dueDate || undefined, startDate: startDate || undefined, deadline, assignee })
+      : api.tasks.create(createPayload);
+
+    createPromise.then((data) => {
+      commit((draft) => {
+        const task = data.task;
+        const taskObj = {
+          id: task.id,
+          title: task.title,
+          description: task.description || "",
+          status: task.status || "active",
+          priority: task.priority || "today",
+          deadline: task.deadline || deadline,
+          dueDate: task.dueDate || dueDate || null,
+          startDate: task.startDate || startDate || null,
+          activity: "Сейчас",
+          assignee: task.assignee || assignee,
+          creator: draft.profile.name,
+          project: task.project || projectName,
+          projectType: "group",
+          tags: task.tags || "manual",
+          bucket: task.bucket || "today",
+          planBucket: "unscheduled",
+          chatId: task.chatThreadId || task.chatThread?.id || null,
+          startDay: 1,
+          endDay: 2,
+          doneDay: 3,
+          comments: 0,
+          files,
+        };
+        draft.tasks.unshift(taskObj);
+        if (task.chatThread || task.chatThreadId) {
+          const chatId = task.chatThreadId || task.chatThread?.id;
+          draft.chats.unshift({
+            id: chatId,
+            title: task.title,
+            tab: "task",
+            counterpart: assignee,
+            snippet: description || "Задача создана",
+            unread: 0,
+            updatedAt: "Сейчас",
+            focus: "Чат задачи",
+            checklist: [],
+            messages: [
+              { author: "Orbit AI", mine: false, text: `Задача «${title}» создана. Исполнитель: ${assignee}. Срок: ${deadline}. Проект: ${projectName}.`, time: "Сейчас" },
+            ],
+          });
+          draft.ui.selectedTaskId = task.id;
+          draft.ui.activeChat = chatId;
+        }
+        draft.ui.showQuickTaskDialog = false;
+        draft.ui.showFullTaskForm = false;
+        draft.ui.fileDropdownContext = null;
+        draft.ui.projectDropdownContext = null;
+        draft.ui.quickTaskFiles = [];
+        draft.ui.quickTaskProject = null;
+        draft.ui.fullTaskFiles = [];
+        draft.ui.fullTaskProject = null;
+        draft.metrics.openTasks = draft.tasks.filter((t) => t.status !== "done").length;
       });
-      draft.chats.unshift({
-        id: chatId,
-        title,
-        tab: "task",
-        counterpart: assignee,
-        snippet: description || "Задача создана",
-        unread: 0,
-        updatedAt: "Сейчас",
-        focus: "Чат задачи",
-        checklist: [],
-        messages: [
-          {
-            author: "Orbit AI",
-            mine: false,
-            text: `Задача «${title}» создана. Исполнитель: ${assignee}. Срок: ${deadline}. Проект: ${projectName}.${files.length ? ` Файлы: ${files.join(", ")}.` : ""}`,
-            time: "Сейчас",
-          },
-        ],
-      });
-      draft.ui.selectedTaskId = taskId;
-      draft.ui.activeChat = chatId;
-      draft.ui.showQuickTaskDialog = false;
-      draft.ui.showFullTaskForm = false;
-      draft.ui.fileDropdownContext = null;
-      draft.ui.projectDropdownContext = null;
-      draft.ui.quickTaskFiles = [];
-      draft.ui.quickTaskProject = null;
-      draft.ui.fullTaskFiles = [];
-      draft.ui.fullTaskProject = null;
-      draft.metrics.openTasks = draft.tasks.filter((t) => t.status !== "done").length;
+    }).catch((err) => {
+      console.error("Task create error:", err);
     });
     return;
   }

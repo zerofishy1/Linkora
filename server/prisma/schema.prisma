@@ -118,6 +118,8 @@ model Task {
   status      String   @default("active")
   priority    String   @default("medium")
   deadline    String   @default("")
+  dueDate     String?                       // ISO datetime "2026-04-15T19:00"
+  startDate   String?                       // ISO datetime "2026-04-10T09:00"
   bucket      String   @default("today")
   planBucket  String   @default("unscheduled")
   kanbanStage String   @default("new")     // new | in_progress | done | on_review

@@ -5310,8 +5310,27 @@ textarea::placeholder {
 .gd-cal-other .gd-cal-date { color: #ccc; }
 .gd-cal-today { background: #f3f0ff; }
 .gd-cal-date { font-size: .75rem; font-weight: 600; color: var(--fg); }
-.gd-cal-pill { font-size: .68rem; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.gd-cal-pill { font-size: .68rem; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 3px; }
+.gd-cal-pill.overdue { background: #e53935; }
+.gd-cal-dot { width: 5px; height: 5px; border-radius: 50%; background: #fff; flex-shrink: 0; }
 .gd-cal-event-pill { font-size: .68rem; background: #1a73e8; color: #fff; border-radius: 4px; padding: 1px 5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+
+/* Calendar bars for multi-day tasks */
+.gd-cal-bar { font-size: .65rem; background: var(--accent); color: #fff; padding: 2px 4px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; min-height: 16px; }
+.gd-cal-bar-start { border-radius: 4px 0 0 4px; margin-right: -1px; }
+.gd-cal-bar-end { border-radius: 0 4px 4px 0; margin-left: -1px; }
+.gd-cal-bar-mid { border-radius: 0; margin-left: -1px; margin-right: -1px; }
+.gd-cal-bar-overdue { background: #e53935; }
+
+/* Task detail date edit */
+.gd-task-date-edit { margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--border); }
+.gd-task-date-edit input[type="datetime-local"] { padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-size: .82rem; background: #fff; width: 100%; box-sizing: border-box; }
+
+/* Main tasks calendar improvements */
+.task-cal-other { opacity: 0.4; }
+.task-calendar-event.overdue { color: #e53935; }
+.task-calendar-event.overdue .dot { background: #e53935; }
+.task-calendar-event.start-marker { color: var(--accent); opacity: .8; }
 
 /* ─── Calendar Event Form ─── */
 .gd-event-form { background: var(--panel-bg, #faf9fc); border: 1.5px solid var(--border); border-radius: 12px; padding: 16px; }

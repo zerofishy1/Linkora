@@ -71,9 +71,14 @@ router.post("/", requireRole("admin", "member"), async (req: Request, res: Respo
   try {
     const userId = req.user!.userId;
     const wsId = req.user!.workspaceId!;
-    const { title, description, status, priority, deadline, assignee, project, projectType, tags, bucket, createChat, files } = req.body;
+    const { title, description, status, priority, deadline, dueDate, startDate, assignee, project, projectType, tags, bucket, createChat, files } = req.body;
 
     if (!title) { res.status(400).json({ error: "Название задачи обязательно" }); return; }
+
+    // Validate dates
+    if (dueDate && startDate && new Date(startDate) > new Date(dueDate)) {
+      res.status(400).json({ error: "Дата начала не может быть позже дедлайна" }); return;
+    }
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
     const ownerName = user?.name || "";
@@ -99,7 +104,8 @@ router.post("/", requireRole("admin", "member"), async (req: Request, res: Respo
       const task = await tx.task.create({
         data: {
           title, description: description || "", status: status || "active", priority: priority || "today",
-          deadline: deadline || "", assignee: assignee || ownerName, project: project || "",
+          deadline: deadline || "", dueDate: dueDate || null, startDate: startDate || null,
+          assignee: assignee || ownerName, project: project || "",
           projectType: projectType || "", tags: tags || "", bucket: bucket || "today",
           ownerId: userId, creatorId: userId, workspaceId: wsId, chatThreadId,
         },
@@ -132,18 +138,27 @@ router.patch("/:id", requireRole("admin", "member"), async (req: Request, res: R
       res.status(403).json({ error: "Можно редактировать только свои задачи" }); return;
     }
 
-    const { title, description, status, priority, deadline, assignee, project, projectType, tags, bucket } = req.body;
+    const { title, description, status, priority, deadline, dueDate, startDate, assignee, project, projectType, tags, bucket } = req.body;
     const data: any = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
     if (status !== undefined) data.status = status;
     if (priority !== undefined) data.priority = priority;
     if (deadline !== undefined) data.deadline = deadline;
+    if (dueDate !== undefined) data.dueDate = dueDate || null;
+    if (startDate !== undefined) data.startDate = startDate || null;
     if (assignee !== undefined) data.assignee = assignee;
     if (project !== undefined) data.project = project;
     if (projectType !== undefined) data.projectType = projectType;
     if (tags !== undefined) data.tags = tags;
     if (bucket !== undefined) data.bucket = bucket;
+
+    // Validate date ordering
+    const finalDue = data.dueDate !== undefined ? data.dueDate : existing.dueDate;
+    const finalStart = data.startDate !== undefined ? data.startDate : existing.startDate;
+    if (finalDue && finalStart && new Date(finalStart) > new Date(finalDue)) {
+      res.status(400).json({ error: "Дата начала не может быть позже дедлайна" }); return;
+    }
 
     const task = await prisma.task.update({ where: { id: req.params.id }, data, include: { files: true, chatThread: true } });
     res.json({ task });
@@ -168,6 +183,46 @@ router.delete("/:id", requireRole("admin", "member"), async (req: Request, res: 
   } catch (err) {
     console.error("Task delete error:", err);
     res.status(500).json({ error: "Ошибка удаления задачи" });
+  }
+});
+
+// GET /api/tasks/calendar?month=YYYY-MM — tasks with dueDate in the given month
+router.get("/calendar/month", async (req: Request, res: Response) => {
+  try {
+    const wsId = req.user!.workspaceId!;
+    const month = String(req.query.month || ""); // "2026-04"
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ error: "Параметр month обязателен в формате YYYY-MM" }); return;
+    }
+
+    const [yearStr, monthStr] = month.split("-");
+    const year = parseInt(yearStr, 10);
+    const mon = parseInt(monthStr, 10) - 1; // 0-based
+    const start = new Date(year, mon, 1).toISOString();
+    const end = new Date(year, mon + 1, 0, 23, 59, 59).toISOString();
+
+    // Find tasks that overlap with the month:
+    // dueDate falls in range OR startDate falls in range OR range is between startDate..dueDate
+    const tasks = await prisma.task.findMany({
+      where: {
+        workspaceId: wsId,
+        OR: [
+          { dueDate: { gte: month + "-01", lte: month + "-31T23:59" } },
+          { startDate: { gte: month + "-01", lte: month + "-31T23:59" } },
+          // Multi-day tasks spanning the whole month
+          { AND: [{ startDate: { lte: month + "-01" } }, { dueDate: { gte: month + "-31" } }] },
+        ],
+      },
+      include: {
+        creator: { select: { id: true, name: true, initials: true } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+
+    res.json({ tasks });
+  } catch (err) {
+    console.error("Calendar tasks error:", err);
+    res.status(500).json({ error: "Ошибка получения задач календаря" });
   }
 });
 
