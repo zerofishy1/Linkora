@@ -121,8 +121,8 @@ a {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
-  gap: 18px;
-  padding: 16px;
+  gap: 0;
+  padding: 0;
 }
 
 .sidebar {
@@ -1769,7 +1769,7 @@ a {
   }
 }
 
-@media (max-width: 1260px) {
+@media (max-width: 1200px) {
   .messenger-shell,
   .dashboard-grid,
   .hero-grid,
@@ -1782,9 +1782,7 @@ a {
   .board {
     grid-template-columns: repeat(2, minmax(220px, 1fr));
   }
-}
 
-@media (max-width: 1500px) {
   .messenger-shell {
     grid-template-columns: minmax(260px, 0.86fr) minmax(0, 1fr);
   }
@@ -1794,19 +1792,19 @@ a {
   }
 }
 
-@media (max-width: 980px) {
+@media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
-    padding: 14px;
+    padding: 0;
   }
 
   .sidebar {
     position: fixed;
-    inset: 14px auto 14px 14px;
+    inset: 0 auto 0 0;
     width: min(86vw, var(--sidebar-width));
-    height: auto;
+    height: 100vh;
     pointer-events: none;
-    transform: translateX(calc(-100% - 24px));
+    transform: translateX(-100%);
     transition: transform 0.24s ease;
     z-index: 30;
   }
@@ -1832,10 +1830,6 @@ a {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-  }
-
-  .topbar {
-    top: 14px;
   }
 
   .topbar-service,
@@ -1934,9 +1928,9 @@ body::after {
 }
 
 .app-shell {
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 52px;
-  gap: 8px;
-  padding: 8px;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  gap: 0;
+  padding: 0;
 }
 
 .sidebar {
@@ -1988,7 +1982,7 @@ body::after {
   background: linear-gradient(90deg, #f07cb9, #c859ff); font-size:.82rem;
 }
 
-.content-shell { overflow: hidden; }
+.content-shell { overflow-y: auto; overflow-x: hidden; }
 .topbar { display:flex; flex-direction:column; gap:8px; }
 .portal-bar, .portal-pagebar {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
@@ -2134,8 +2128,8 @@ body::after {
 }
 
 .app-shell {
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 44px;
-  gap: 12px;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  gap: 0;
   padding: 0;
 }
 
@@ -2239,10 +2233,12 @@ body::after {
 
 .content-shell {
   padding: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .topbar {
@@ -2307,8 +2303,9 @@ body::after {
 }
 
 .portal-left-tabs {
-  flex-wrap: nowrap;
-  overflow: auto;
+  flex-wrap: wrap;
+  overflow: visible;
+  gap: 4px;
 }
 
 .portal-left-tabs::-webkit-scrollbar {
@@ -2361,7 +2358,7 @@ body::after {
 }
 
 .workspace {
-  padding: 0 8px 0 0;
+  padding: 0 12px 12px;
 }
 
 .bitrix-messenger-shell {
@@ -2518,9 +2515,17 @@ body::after {
 .art-mascot::after { right: 26px; }
 
 .quick-rail {
-  top: 88px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 44px;
+  height: 100vh;
+  z-index: 8;
   gap: 8px;
-  padding-top: 24px;
+  padding-top: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .quick-rail-button,
@@ -2615,6 +2620,8 @@ body::after {
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .task-view-tab.is-active {
@@ -2917,7 +2924,7 @@ body::after {
 .task-calendar-weekdays,
 .task-calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .task-calendar-weekdays span {
@@ -2929,11 +2936,12 @@ body::after {
 
 .task-calendar-cell {
   position: relative;
-  min-height: 150px;
+  min-height: 100px;
   border-right: 1px solid rgba(219,224,237,0.8);
   border-bottom: 1px solid rgba(219,224,237,0.8);
-  padding: 10px;
+  padding: 8px;
   color: #666d80;
+  overflow: hidden;
 }
 
 .task-calendar-cell.selected {
@@ -2971,13 +2979,19 @@ body::after {
 }
 
 .task-calendar-event {
-  margin-top: 32px;
+  margin-top: 28px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   color: #6f7480;
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(139, 92, 246, 0.06);
 }
 
 .task-calendar-event .dot {
@@ -3072,9 +3086,9 @@ body::after {
 .task-header-bar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  padding: 0 0 4px;
+  padding: 8px 12px 8px 0;
 }
 
 .task-header-left {
@@ -3103,20 +3117,24 @@ body::after {
 .task-create-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   border: 0;
-  border-radius: 6px;
-  background: #bbd742;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
-  padding: 8px 16px;
+  padding: 9px 18px;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.15s ease;
 }
 
 .task-create-btn:hover {
-  background: #a9c438;
+  background: linear-gradient(135deg, #059669, #047857);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  transform: translateY(-1px);
 }
 
 .task-create-arrow {
@@ -3198,15 +3216,17 @@ body::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  overflow-x: auto;
   border-bottom: 1px solid rgba(219, 224, 237, 0.6);
   padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .task-tabs-left {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .task-tabs-right {
@@ -3220,9 +3240,10 @@ body::after {
 .task-scope-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   padding: 4px 0;
+  min-width: 0;
 }
 
 .task-scope-btn {
@@ -3502,7 +3523,7 @@ body::after {
   border-top: 1px solid rgba(219, 224, 237, 0.72);
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .docs-sheet-table .sheet-row,
   .crm-sheet-table .sheet-row {
     grid-template-columns: 1fr;
@@ -3550,7 +3571,7 @@ body::after {
 .group-card,
 .integration-card,
 .doc-launch-card {
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: none;
 }
 
@@ -3560,19 +3581,20 @@ body::after {
 
 .bitrix-messenger-shell {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr) !important;
+  grid-template-columns: 320px minmax(0, 1fr) !important;
   gap: 0;
   align-items: stretch;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  flex: 1 1 0;
 }
 
 .bitrix-chat-list.panel {
   grid-column: 1;
   border-right: 1px solid rgba(9, 30, 66, 0.08);
-  border-radius: 14px 0 0 14px;
+  border-radius: 12px 0 0 12px;
   min-width: 0;
 }
 
@@ -3583,7 +3605,7 @@ body::after {
   grid-template-rows: auto 1fr auto;
   min-height: calc(100vh - 210px);
   border-left: 1px solid rgba(9, 30, 66, 0.08);
-  border-radius: 0 14px 14px 0;
+  border-radius: 0 12px 12px 0;
   background: #f6f8fc;
   min-width: 0;
 }
@@ -3660,6 +3682,9 @@ body::after {
   --danger: #ef4444;
   --shadow: 0 1px 3px rgba(80, 50, 130, 0.06), 0 1px 2px rgba(80, 50, 130, 0.04);
   --shadow-lg: 0 4px 12px rgba(80, 50, 130, 0.08);
+  --radius-card: 12px;
+  --radius-btn: 8px;
+  --radius-tab: 6px;
 }
 
 body {
@@ -3674,12 +3699,21 @@ body::after {
 
 /* ── Sidebar ── */
 .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: linear-gradient(180deg, #2d1b69 0%, #1e1145 100%);
   border: 0;
   border-right: none;
   box-shadow: none;
   border-radius: 0;
   color: #e8e0ff;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 18px;
+  gap: 12px;
 }
 
 .sidebar-brand-bitrix {
@@ -3757,6 +3791,9 @@ body::after {
 
 /* ── Topbar / Portal bar ── */
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -3764,6 +3801,7 @@ body::after {
   padding: 0;
   min-height: auto;
   backdrop-filter: none;
+  flex-shrink: 0;
 }
 
 .portal-bar,
@@ -3774,12 +3812,12 @@ body::after {
   border-radius: 0;
   color: #e8e0ff;
   box-shadow: 0 2px 8px rgba(45, 27, 105, 0.15);
-  height: 52px;
   min-height: 52px;
-  max-height: 52px;
-  padding: 0 14px;
+  padding: 8px 14px;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .topbar-service,
@@ -3790,12 +3828,12 @@ body::after {
   border-radius: 0;
   color: #e8e0ff;
   box-shadow: 0 2px 8px rgba(45, 27, 105, 0.15);
-  height: 52px;
   min-height: 52px;
-  max-height: 52px;
-  padding: 0 14px;
+  padding: 8px 14px;
   align-items: center;
-  overflow: hidden;
+  overflow: visible;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .service-brand-mark {
@@ -3820,6 +3858,8 @@ body::after {
   padding: 6px 12px;
   font-size: 0.88rem;
   min-height: 34px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
 .service-nav-button:hover,
@@ -3851,6 +3891,8 @@ body::after {
 
 .portal-pagebar {
   background: linear-gradient(90deg, #2d1b69, #3b2280);
+  min-height: auto;
+  padding: 12px 18px;
 }
 
 .portal-pagehead h1 {
@@ -3879,6 +3921,7 @@ body::after {
 .doc-launch-card {
   background: #ffffff;
   border: 1px solid var(--panel-border);
+  border-radius: 12px;
   box-shadow: var(--shadow);
   color: var(--text);
 }
@@ -3996,7 +4039,9 @@ body::after {
 .search-shell.bitrix-search-shell {
   background: rgba(0, 0, 0, 0.04);
   border: 1px solid var(--panel-border);
-  min-width: 260px;
+  min-width: 180px;
+  max-width: 340px;
+  flex: 1 1 auto;
 }
 
 .search-shell.bitrix-search-shell input {
@@ -4061,12 +4106,22 @@ body::after {
 .task-toolbar-button {
   background: rgba(0, 0, 0, 0.04);
   color: var(--muted);
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.task-view-tab:hover,
+.task-signal-tab:hover,
+.task-toolbar-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--text);
 }
 
 .task-view-tab.is-active {
   background: var(--accent-soft);
   color: var(--accent-strong);
-  box-shadow: none;
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.15);
+  font-weight: 600;
 }
 
 .task-search-chip {
@@ -4186,11 +4241,17 @@ body::after {
 .task-role-pill {
   background: rgba(0, 0, 0, 0.04);
   color: var(--muted);
+  transition: all 0.15s ease;
+}
+
+.task-role-pill:hover {
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .task-role-pill.is-active {
   background: var(--accent-soft);
   color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px rgba(139, 92, 246, 0.12);
 }
 
 .task-scope-tag {
@@ -4305,6 +4366,10 @@ textarea::placeholder {
 /* ── Workspace area ── */
 .workspace {
   background: var(--bg);
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px 12px;
 }
 
 /* ── Messenger illustration ── */
@@ -4328,13 +4393,14 @@ textarea::placeholder {
 }
 
 .bitrix-messenger-shell {
-  min-height: 620px;
+  min-height: 0;
+  flex: 1;
 }
 
 .bitrix-chat-list.panel {
   display: grid;
   grid-template-rows: auto auto 1fr;
-  min-height: 620px;
+  min-height: 0;
 }
 
 .bitrix-thread-list {
@@ -4343,7 +4409,7 @@ textarea::placeholder {
 }
 
 .bitrix-message-pane.panel {
-  min-height: 620px;
+  min-height: 0;
 }
 
 @media (max-width: 900px) {
