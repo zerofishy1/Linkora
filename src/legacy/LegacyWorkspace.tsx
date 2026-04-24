@@ -108,7 +108,6 @@ const MENU = [
     items: [
       { route: "messenger", label: "Мессенджер", badge: "MS" },
       { route: "feed", label: "Лента", badge: "FD" },
-      { route: "collabs", label: "Коллабы", badge: "CL" },
       { route: "calendar", label: "Календарь", badge: "CA" },
       { route: "documents", label: "Документы", badge: "DC" },
       { route: "boards", label: "Доски", badge: "BD" },
@@ -130,11 +129,8 @@ const MENU = [
 const CHAT_TABS = [
   { id: "chat", label: "Чаты", route: "messenger", badge: "CH" },
   { id: "task", label: "Чаты задач", route: "messenger", badge: "TS" },
-  { id: "copilot", label: "Orbit AI", route: "messenger", badge: "AI" },
-  { id: "collab", label: "Коллабы", route: "collabs", badge: "CL" },
   { id: "channel", label: "Каналы", route: "messenger", badge: "KN" },
   { id: "notification", label: "Уведомления", route: "messenger", badge: "NT" },
-  { id: "call", label: "Телефония", route: "messenger", badge: "CLL" },
   { id: "settings", label: "Настройки", route: "messenger", badge: "ST" },
 ];
 
@@ -252,12 +248,28 @@ function createSeedState() {
       selectedTaskId: null,
       showQuickTaskDialog: false,
       showFullTaskForm: false,
+      showTaskDetail: false,
+      expandedFeedPost: null,
+      showMailComposer: false,
       fileDropdownContext: null,
       projectDropdownContext: null,
       quickTaskProject: null,
       fullTaskProject: null,
       quickTaskFiles: [],
       fullTaskFiles: [],
+      quickTaskAssigneeKind: "user", // "user" | "group"
+      quickTaskAssigneeId: null,
+      fullTaskAssigneeKind: "user",
+      fullTaskAssigneeId: null,
+      // Полный фарш для full task form
+      fullTaskChecklist: [],              // [{id, text, done}]
+      fullTaskReminders: [],              // [{id, at, message}]
+      fullTaskTimeTrackedMin: 0,
+      fullTaskTimeTrackingFrom: null,
+      fullTaskParentId: null,
+      fullTaskCoAssigneeIds: [],          // string[] of userIds
+      fullTaskWatcherIds: [],
+      fullTaskLinkedIds: [],
       groupsFilter: "active",
       activeGroupId: null,
       activeGroup: null,
@@ -309,6 +321,7 @@ function createSeedState() {
     },
     groups: [],
     people: [],
+    members: [],
     chats: [],
   };
 }
@@ -422,7 +435,7 @@ function dueDateToISO(dateStr) {
 
 async function fetchWorkspaceData() {
   try {
-    const [tasksRes, chatsRes, eventsRes, feedRes, mailRes, docsRes, groupsRes, peopleRes] = await Promise.allSettled([
+    const [tasksRes, chatsRes, eventsRes, feedRes, mailRes, docsRes, groupsRes, peopleRes, wsRes] = await Promise.allSettled([
       api.tasks.list(),
       api.chats.list(),
       api.events.list(),
@@ -431,6 +444,7 @@ async function fetchWorkspaceData() {
       api.documents.list(),
       api.groups.list(),
       api.people.list(),
+      api.workspaces.current(),
     ]);
 
     const data = {};
@@ -447,10 +461,15 @@ async function fetchWorkspaceData() {
         dueDate: t.dueDate || null,
         startDate: t.startDate || null,
         activity: formatDate(t.updatedAt),
-        assignee: t.assignee || "",
-        creator: t.assignee || "",
-        project: t.project || "",
-        projectType: "group",
+        assignee: t.assigneeUser?.name || t.assigneeGroup?.title || t.assignee || "",
+        assigneeUserId: t.assigneeUser?.id || null,
+        assigneeGroupId: t.assigneeGroup?.id || null,
+        assigneeKind: t.assigneeGroup ? "group" : t.assigneeUser ? "user" : "none",
+        creator: t.creator?.name || "",
+        creatorId: t.creator?.id || t.creatorId || null,
+        project: t.group?.title || t.project || "",
+        projectId: t.group?.id || null,
+        projectType: t.group ? "group" : "",
         tags: t.tags || "",
         bucket: t.bucket || "week",
         planBucket: "unscheduled",
@@ -503,6 +522,9 @@ async function fetchWorkspaceData() {
         author: p.author || "",
         createdAt: formatDate(p.createdAt),
         tag: p.tag || "",
+        liked: false,
+        likes: 0,
+        comments: [],
       }));
     }
 
@@ -555,6 +577,18 @@ async function fetchWorkspaceData() {
         role: p.role || "",
         state: p.state || "Оффлайн",
         focus: p.focus || "",
+      }));
+    }
+
+    // Workspace members (реальные User с userId — для назначения исполнителей)
+    if (wsRes.status === "fulfilled" && wsRes.value?.workspace?.members) {
+      data.members = wsRes.value.workspace.members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        initials: m.initials,
+        email: m.email,
+        jobTitle: m.jobTitle,
+        role: m.role,
       }));
     }
 
@@ -805,9 +839,6 @@ function getTopbarTabs(route) {
         { label: "Событие", active: false, action: "navigate", route: "calendar" },
         { label: "Опрос", active: false, action: "quick-capture" },
         { label: "Файл", active: false, action: "navigate", route: "documents" },
-        { label: "Благодарность", active: false, action: "quick-capture" },
-        { label: "Важное", active: false, action: "quick-capture" },
-        { label: "Избранное", active: false, action: "quick-capture" },
       ];
     case "calendar":
       return [
@@ -940,9 +971,6 @@ function renderTopbar(route) {
           >
             Пригласить
           </button>
-          <button class="utility-button" data-action="open-assistant">
-            Помощь
-          </button>
           <div class="service-time">17:00</div>
           <div class="avatar">${escapeHtml(state.profile.initials)}</div>
         </div>
@@ -973,10 +1001,21 @@ function renderQuickTaskDialog() {
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="quickTaskAssignee">Исполнитель</label>
-              <select id="quickTaskAssignee" name="assignee">
-                ${state.people.map((p) => `<option value="${escapeHtml(p.name)}" ${p.name === state.profile.name ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}
-              </select>
+              <label>Исполнитель</label>
+              <div class="tab-chip-group" style="display:flex;gap:4px;margin-bottom:6px">
+                <button type="button" class="tab-chip ${(state.ui.quickTaskAssigneeKind || 'user') === 'user' ? 'is-active' : ''}" data-action="set-assignee-kind" data-context="quick" data-kind="user">Человек</button>
+                <button type="button" class="tab-chip ${state.ui.quickTaskAssigneeKind === 'group' ? 'is-active' : ''}" data-action="set-assignee-kind" data-context="quick" data-kind="group">Группа</button>
+              </div>
+              ${(state.ui.quickTaskAssigneeKind || 'user') === 'group' ? `
+                <select id="quickTaskAssignee" name="assigneeGroupId">
+                  <option value="">— не выбрано —</option>
+                  ${state.groups.map((g) => `<option value="${g.id}" ${state.ui.quickTaskAssigneeId === g.id ? "selected" : ""}>${escapeHtml(g.title)}</option>`).join("")}
+                </select>
+              ` : `
+                <select id="quickTaskAssignee" name="assigneeUserId">
+                  ${(state.members || []).map((m) => `<option value="${m.id}" ${m.name === state.profile.name ? "selected" : ""}>${escapeHtml(m.name)}</option>`).join("")}
+                </select>
+              `}
             </div>
             <div class="field">
               <label for="quickTaskDueDate">Крайний срок</label>
@@ -1056,10 +1095,21 @@ function renderFullTaskForm() {
           </div>
           <div class="field-row">
             <div class="field">
-              <label for="fullTaskAssignee">Исполнитель</label>
-              <select id="fullTaskAssignee" name="assignee">
-                ${state.people.map((p) => `<option value="${escapeHtml(p.name)}" ${p.name === state.profile.name ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}
-              </select>
+              <label>Исполнитель</label>
+              <div class="tab-chip-group" style="display:flex;gap:4px;margin-bottom:6px">
+                <button type="button" class="tab-chip ${(state.ui.fullTaskAssigneeKind || 'user') === 'user' ? 'is-active' : ''}" data-action="set-assignee-kind" data-context="full" data-kind="user">Человек</button>
+                <button type="button" class="tab-chip ${state.ui.fullTaskAssigneeKind === 'group' ? 'is-active' : ''}" data-action="set-assignee-kind" data-context="full" data-kind="group">Группа</button>
+              </div>
+              ${(state.ui.fullTaskAssigneeKind || 'user') === 'group' ? `
+                <select id="fullTaskAssignee" name="assigneeGroupId">
+                  <option value="">— не выбрано —</option>
+                  ${state.groups.map((g) => `<option value="${g.id}" ${state.ui.fullTaskAssigneeId === g.id ? "selected" : ""}>${escapeHtml(g.title)}</option>`).join("")}
+                </select>
+              ` : `
+                <select id="fullTaskAssignee" name="assigneeUserId">
+                  ${(state.members || []).map((m) => `<option value="${m.id}" ${m.name === state.profile.name ? "selected" : ""}>${escapeHtml(m.name)}</option>`).join("")}
+                </select>
+              `}
             </div>
             <div class="field">
               <label for="fullTaskDueDate">Крайний срок</label>
@@ -1099,7 +1149,22 @@ function renderFullTaskForm() {
                 </div>
               ` : ""}
             </details>
-            <details><summary>☑ Чек-листы</summary><p>Добавьте пункты чек-листа</p></details>
+            <details ${(state.ui.fullTaskChecklist || []).length ? "open" : ""}>
+              <summary>☑ Чек-листы ${(state.ui.fullTaskChecklist || []).length ? `<span class="section-badge">${(state.ui.fullTaskChecklist || []).length}</span>` : ""}</summary>
+              <div class="task-checklist-list">
+                ${(state.ui.fullTaskChecklist || []).map((item) => `
+                  <div class="task-checklist-item">
+                    <button type="button" class="task-checklist-check ${item.done ? 'is-done' : ''}" data-action="toggle-checklist" data-item-id="${item.id}">${item.done ? '☑' : '☐'}</button>
+                    <span class="task-checklist-text ${item.done ? 'is-done' : ''}">${escapeHtml(item.text)}</span>
+                    <button type="button" class="task-checklist-remove" data-action="remove-checklist" data-item-id="${item.id}">✕</button>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="task-checklist-add">
+                <input id="checklistNewItem" placeholder="Добавить пункт..." autocomplete="off" />
+                <button type="button" class="ghost-button" data-action="add-checklist-item">+</button>
+              </div>
+            </details>
             <details open class="task-section-project">
               <summary>📁 Проект ${state.ui.fullTaskProject ? `<span class="section-badge">✓</span>` : ""}</summary>
               <div class="task-project-selector">
@@ -1127,20 +1192,103 @@ function renderFullTaskForm() {
                 `}
               </div>
             </details>
-            <details><summary>👥 Соисполнители</summary><p>Добавьте соисполнителей задачи</p></details>
-            <details><summary>👁 Наблюдатели</summary><p>Добавьте наблюдателей</p></details>
-            <details><summary>🔔 Напоминания</summary><p>Настройте напоминания</p></details>
-            <details><summary>🔗 Родительская задача</summary><p>Укажите родительскую задачу</p></details>
-            <details><summary>📋 Подзадачи</summary><p>Добавьте подзадачи</p></details>
-            <details><summary>🔄 Связанные задачи</summary><p>Укажите связанные задачи</p></details>
-            <details><summary>📊 Планирование сроков</summary><p>Настройте планирование по срокам</p></details>
-            <details><summary>⏱ Учёт времени</summary><p>Настройте учёт времени по задаче</p></details>
+            <details ${(state.ui.fullTaskCoAssigneeIds || []).length ? "open" : ""}>
+              <summary>👥 Соисполнители ${(state.ui.fullTaskCoAssigneeIds || []).length ? `<span class="section-badge">${(state.ui.fullTaskCoAssigneeIds || []).length}</span>` : ""}</summary>
+              <div class="task-people-picker">
+                ${(state.members || []).filter(m => m.id !== state.profile.id).map((m) => {
+                  const active = (state.ui.fullTaskCoAssigneeIds || []).includes(m.id);
+                  return `<button type="button" class="task-people-chip ${active ? 'is-active' : ''}" data-action="toggle-co-assignee" data-user-id="${m.id}">${escapeHtml(m.name)}${active ? ' ✓' : ''}</button>`;
+                }).join("")}
+              </div>
+            </details>
+            <details ${(state.ui.fullTaskWatcherIds || []).length ? "open" : ""}>
+              <summary>👁 Наблюдатели ${(state.ui.fullTaskWatcherIds || []).length ? `<span class="section-badge">${(state.ui.fullTaskWatcherIds || []).length}</span>` : ""}</summary>
+              <div class="task-people-picker">
+                ${(state.members || []).filter(m => m.id !== state.profile.id).map((m) => {
+                  const active = (state.ui.fullTaskWatcherIds || []).includes(m.id);
+                  return `<button type="button" class="task-people-chip ${active ? 'is-active' : ''}" data-action="toggle-watcher" data-user-id="${m.id}">${escapeHtml(m.name)}${active ? ' ✓' : ''}</button>`;
+                }).join("")}
+              </div>
+            </details>
+            <details ${(state.ui.fullTaskReminders || []).length ? "open" : ""}>
+              <summary>🔔 Напоминания ${(state.ui.fullTaskReminders || []).length ? `<span class="section-badge">${(state.ui.fullTaskReminders || []).length}</span>` : ""}</summary>
+              <div class="task-reminder-list">
+                ${(state.ui.fullTaskReminders || []).map((r) => `
+                  <div class="task-reminder-item">
+                    <span class="task-reminder-time">🕐 ${escapeHtml(new Date(r.at).toLocaleString('ru-RU'))}</span>
+                    <span class="task-reminder-msg">${escapeHtml(r.message || '')}</span>
+                    <button type="button" class="task-checklist-remove" data-action="remove-reminder" data-item-id="${r.id}">✕</button>
+                  </div>
+                `).join("")}
+              </div>
+              <div class="task-reminder-add">
+                <input id="reminderNewAt" type="datetime-local" />
+                <input id="reminderNewMsg" placeholder="Комментарий (необязательно)" />
+                <button type="button" class="ghost-button" data-action="add-reminder-item">+</button>
+              </div>
+            </details>
+            <details ${state.ui.fullTaskParentId ? "open" : ""}>
+              <summary>🔗 Родительская задача ${state.ui.fullTaskParentId ? '<span class="section-badge">✓</span>' : ''}</summary>
+              <div class="task-parent-picker">
+                <select data-action="set-parent-task">
+                  <option value="">— без родительской —</option>
+                  ${(state.tasks || []).map((t) => `<option value="${t.id}" ${state.ui.fullTaskParentId === t.id ? 'selected' : ''}>${escapeHtml(t.title)}</option>`).join("")}
+                </select>
+              </div>
+            </details>
+            <details>
+              <summary>📋 Подзадачи</summary>
+              <p class="task-section-hint">Подзадачи создаются автоматически при выборе текущей как родительской для других задач.</p>
+            </details>
+            <details ${(state.ui.fullTaskLinkedIds || []).length ? "open" : ""}>
+              <summary>🔄 Связанные задачи ${(state.ui.fullTaskLinkedIds || []).length ? `<span class="section-badge">${(state.ui.fullTaskLinkedIds || []).length}</span>` : ""}</summary>
+              <div class="task-people-picker">
+                ${(state.tasks || []).slice(0, 20).map((t) => {
+                  const active = (state.ui.fullTaskLinkedIds || []).includes(t.id);
+                  return `<button type="button" class="task-people-chip ${active ? 'is-active' : ''}" data-action="toggle-linked-task" data-task-id="${t.id}">${escapeHtml(t.title)}${active ? ' ✓' : ''}</button>`;
+                }).join("")}
+              </div>
+            </details>
+            <details>
+              <summary>📊 Планирование сроков</summary>
+              <div class="task-planning">
+                <div class="task-planning-row"><span>Начало:</span> <span>${escapeHtml(state.ui.fullTaskStartDateDisplay || "—")}</span></div>
+                <div class="task-planning-row"><span>Крайний срок:</span> <span>${escapeHtml(state.ui.fullTaskDueDateDisplay || "—")}</span></div>
+                <p class="task-section-hint">Используется даты «Крайний срок» и «Дата начала» сверху. Сроки подхватываются автоматически.</p>
+              </div>
+            </details>
+            <details>
+              <summary>⏱ Учёт времени ${state.ui.fullTaskTimeTrackedMin ? `<span class="section-badge">${Math.floor(state.ui.fullTaskTimeTrackedMin / 60)}ч ${state.ui.fullTaskTimeTrackedMin % 60}м</span>` : ''}</summary>
+              <div class="task-time-tracker">
+                <div class="task-time-value">Накоплено: <strong>${Math.floor((state.ui.fullTaskTimeTrackedMin || 0) / 60)}ч ${(state.ui.fullTaskTimeTrackedMin || 0) % 60}м</strong></div>
+                <div class="task-time-actions">
+                  ${state.ui.fullTaskTimeTrackingFrom
+                    ? `<button type="button" class="ghost-button" data-action="stop-time-tracking">⏸ Стоп</button>`
+                    : `<button type="button" class="ghost-button" data-action="start-time-tracking">▶ Старт</button>`}
+                  <button type="button" class="ghost-button" data-action="reset-time-tracking">Сбросить</button>
+                </div>
+                ${state.ui.fullTaskTimeTrackingFrom ? `<p class="task-section-hint">Таймер работает с ${escapeHtml(new Date(state.ui.fullTaskTimeTrackingFrom).toLocaleTimeString('ru-RU'))}</p>` : ""}
+              </div>
+            </details>
           </div>
         </div>
         <div class="task-dialog-actions">
           <button type="submit" class="primary-button">Создать</button>
           <button type="button" class="ghost-button" data-action="close-full-task-form">Отмена</button>
-          <button type="button" class="ghost-button" data-action="quick-capture">Шаблоны</button>
+          <button type="button" class="ghost-button" data-action="save-task-template">💾 Сохранить шаблон</button>
+          <button type="button" class="ghost-button" data-action="toggle-templates-dropdown">📋 Шаблоны${(JSON.parse(localStorage.getItem('linkora-task-templates') || '[]')).length ? ` (${JSON.parse(localStorage.getItem('linkora-task-templates') || '[]').length})` : ''}</button>
+          ${state.ui.showTaskTemplates ? `
+            <div class="task-template-dropdown">
+              ${(JSON.parse(localStorage.getItem('linkora-task-templates') || '[]')).length === 0
+                ? `<p class="task-section-hint">Нет сохранённых шаблонов</p>`
+                : JSON.parse(localStorage.getItem('linkora-task-templates') || '[]').map((tpl, i) => `
+                  <div class="task-template-item">
+                    <button type="button" class="task-template-apply" data-action="apply-task-template" data-template-index="${i}">${escapeHtml(tpl.name || tpl.title || `Шаблон ${i + 1}`)}</button>
+                    <button type="button" class="task-checklist-remove" data-action="delete-task-template" data-template-index="${i}">✕</button>
+                  </div>
+                `).join("")}
+            </div>
+          ` : ""}
         </div>
       </form>
       <div class="task-full-form-right">
@@ -1259,12 +1407,6 @@ function renderTaskChatView() {
           `
           : `
             <div class="bitrix-empty-state">
-              <div class="messenger-center-art">
-                <div class="art-card main"></div>
-                <div class="art-card mini one"></div>
-                <div class="art-card mini two"></div>
-                <div class="art-mascot"></div>
-              </div>
               <h3>${selectedTask ? "Загрузка чата задачи..." : "Выберите задачу"}</h3>
               <p>Выберите задачу слева, чтобы открыть привязанный чат.</p>
             </div>
@@ -1284,16 +1426,6 @@ function renderMessenger(route) {
     return renderTaskChatView();
   }
 
-  const chatTabs = [
-    { id: "chat", label: "Чаты" },
-    { id: "task", label: "Чаты задач" },
-    { id: "ai", label: "Orbit AI" },
-    { id: "collab", label: "Коллабы" },
-    { id: "channel", label: "Каналы" },
-    { id: "notify", label: "Уведомления" },
-    { id: "phone", label: "Телефония" },
-  ];
-
   return `
     <section class="task-shell fade-in">
 
@@ -1310,19 +1442,6 @@ function renderMessenger(route) {
             <span class="search-icon">&#128269;</span>
             <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- Tab row -->
-      <div class="task-tabs-row">
-        <div class="task-tabs-left">
-          ${chatTabs.map((tab) => `
-            <button class="task-view-tab ${activeTab === tab.id ? "is-active" : ""}" data-action="set-chat-tab" data-chat-tab="${tab.id}">${escapeHtml(tab.label)}</button>
-          `).join("")}
-        </div>
-        <div class="task-tabs-right">
-          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
-          <button class="task-toolbar-button">Маркетплейс</button>
         </div>
       </div>
 
@@ -1406,12 +1525,6 @@ function renderMessenger(route) {
               `
               : `
                 <div class="bitrix-empty-state">
-                  <div class="messenger-center-art">
-                    <div class="art-card main"></div>
-                    <div class="art-card mini one"></div>
-                    <div class="art-card mini two"></div>
-                    <div class="art-mascot"></div>
-                  </div>
                   <h3>Выберите чат и начните общение</h3>
                   <p>Чаты, каналы и уведомления собраны в едином окне.</p>
                 </div>
@@ -1442,14 +1555,6 @@ function renderQuickRail(route) {
           </button>
         `;
       }).join("")}
-      <button
-        class="quick-rail-button"
-        data-action="open-assistant"
-        title="Orbit AI"
-        aria-label="Orbit AI"
-      >
-        AI
-      </button>
       ${people
         .map(
           (person) => `
@@ -1497,21 +1602,6 @@ function renderFeed() {
             <span class="search-icon">&#128269;</span>
             <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- Tab row -->
-      <div class="task-tabs-row">
-        <div class="task-tabs-left">
-          <button class="task-view-tab is-active" data-action="quick-capture">Сообщение</button>
-          <button class="task-view-tab" data-action="navigate" data-route="calendar">Событие</button>
-          <button class="task-view-tab" data-action="create-task" data-title="Провести опрос команды" data-description="Задача создана из ленты в формате опроса." data-tag="feed">Опрос</button>
-          <button class="task-view-tab" data-action="navigate" data-route="documents">Файл</button>
-          <button class="task-view-tab">Ещё</button>
-        </div>
-        <div class="task-tabs-right">
-          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
-          <button class="task-toolbar-button">Маркетплейс</button>
         </div>
       </div>
 
@@ -1565,18 +1655,31 @@ function renderFeed() {
                     <span>${escapeHtml(post.createdAt)}</span>
                   </footer>
                   <div class="label-row feed-card-actions">
-                    <button class="ghost-button" data-action="quick-capture">Нравится</button>
+                    <button class="ghost-button ${post.liked ? 'is-active' : ''}" data-action="toggle-feed-like" data-post-id="${post.id}">${post.liked ? '❤' : '♡'} ${post.likes || 0}</button>
+                    <button class="ghost-button" data-action="toggle-feed-comments" data-post-id="${post.id}">💬 ${(post.comments || []).length}</button>
                     <button
                       class="ghost-button"
-                      data-action="create-task"
-                      data-title="${escapeHtml(`Follow-up: ${post.title}`)}"
-                      data-description="${escapeHtml(post.body)}"
-                      data-tag="feed"
+                      data-action="create-task-from-post"
+                      data-post-id="${post.id}"
                     >
-                      Комментировать
+                      Сделать задачей
                     </button>
-                    <button class="ghost-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
                   </div>
+                  ${state.ui.expandedFeedPost === post.id ? `
+                    <div class="feed-post-comments">
+                      ${(post.comments || []).map((c) => `
+                        <div class="feed-comment">
+                          <strong>${escapeHtml(c.author || '')}</strong>
+                          <span>${escapeHtml(c.body || '')}</span>
+                          <small>${escapeHtml(c.createdAt || '')}</small>
+                        </div>
+                      `).join("")}
+                      <div class="feed-comment-add">
+                        <input id="feedCommentInput-${post.id}" placeholder="Написать комментарий..." autocomplete="off" />
+                        <button type="button" class="ghost-button" data-action="add-feed-comment" data-post-id="${post.id}">Отправить</button>
+                      </div>
+                    </div>
+                  ` : ""}
                 </article>
               `,
               )
@@ -1778,21 +1881,6 @@ function renderCalendar() {
         </div>
       </div>
 
-      <!-- Tab row -->
-      <div class="task-tabs-row">
-        <div class="task-tabs-left">
-          ${viewTabs.map((tab) => `
-            <button class="task-view-tab ${calendarView === tab.id ? "is-active" : ""}" data-action="set-calendar-view" data-calendar-view="${tab.id}">${escapeHtml(tab.label)}</button>
-          `).join("")}
-          <span style="margin-left:8px;color:var(--text-secondary);font-size:12px">| Фокус-блоки</span>
-          <span style="color:var(--text-secondary);font-size:12px">Приглашения</span>
-        </div>
-        <div class="task-tabs-right">
-          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
-          <button class="task-toolbar-button">Маркетплейс</button>
-        </div>
-      </div>
-
       <!-- Scope row -->
       <div class="task-scope-row">
         ${scopeTabs.map((s) => `
@@ -1883,9 +1971,6 @@ function renderDocs(route) {
   const openActions = [
     { label: "Открыть с компьютера", action: "route-create", target: "file", route: "drive" },
     { label: "Открыть с Linkora Диска", action: "navigate", route: "drive" },
-    { label: "Выбрать с Google Docs", action: "quick-capture" },
-    { label: "Выбрать с Dropbox", action: "quick-capture" },
-    { label: "Выбрать с Office 365", action: "quick-capture" },
   ];
   const createdBy = "Кюри Амерханов";
   const layoutTabs = [
@@ -1934,12 +2019,6 @@ function renderDocs(route) {
             `,
           )
           .join("")}
-      </div>
-      <div class="task-table-actions docs-table-actions">
-        <button class="task-primary-button" data-action="quick-capture">ПРИМЕНИТЬ</button>
-        <button class="task-muted-button" data-action="quick-capture">ОТМЕНИТЬ</button>
-        <button class="task-muted-button" data-action="quick-capture">Выбрать все</button>
-        <button class="task-muted-button" data-action="quick-capture">Отменить все</button>
       </div>
     </section>
   `;
@@ -2068,13 +2147,6 @@ function renderMail() {
   const mailScope = state.ui.mailScope || "all";
   const unreadCount = state.mail.filter((m) => m.unread).length;
 
-  const mailTabs = [
-    { id: "inbox", label: "Входящие" },
-    { id: "unread", label: "Непрочитанные" },
-    { id: "sent", label: "Исходящие" },
-    { id: "spam", label: "Спам" },
-    { id: "trash", label: "Корзина" },
-  ];
   const scopeTabs = [
     { id: "all", label: "Все" },
     { id: "unread", label: "Непрочитанные" },
@@ -2088,7 +2160,7 @@ function renderMail() {
       <div class="task-header-bar">
         <div class="task-header-left">
           <h2 class="task-page-title"><span class="task-star">&#9733;</span> Почта</h2>
-          <button class="task-create-btn" data-action="quick-capture">
+          <button class="task-create-btn" data-action="open-mail-composer">
             + Написать
           </button>
           <span class="task-role-pill is-active">Все <span class="pill-counter">${state.mail.length}</span></span>
@@ -2099,19 +2171,6 @@ function renderMail() {
             <span class="search-icon">&#128269;</span>
             <span>${escapeHtml(state.ui.query || "Поиск")}</span>
           </div>
-        </div>
-      </div>
-
-      <!-- Tab row -->
-      <div class="task-tabs-row">
-        <div class="task-tabs-left">
-          ${mailTabs.map((tab) => `
-            <button class="task-view-tab ${mailTab === tab.id ? "is-active" : ""}" data-action="set-mail-tab" data-mail-tab="${tab.id}">${escapeHtml(tab.label)}</button>
-          `).join("")}
-        </div>
-        <div class="task-tabs-right">
-          <button class="task-toolbar-button" data-action="open-assistant">Обратная связь</button>
-          <button class="task-toolbar-button">Маркетплейс</button>
         </div>
       </div>
 
@@ -2151,18 +2210,52 @@ function renderMail() {
         </section>
 
         <article class="mail-preview fade-in">
-          <div class="page-head">
-            <div>
-              <h2>${escapeHtml(selected.subject)}</h2>
-              <p>${escapeHtml(selected.from + " \u2022 " + selected.receivedAt)}</p>
+          ${selected ? `
+            <div class="page-head">
+              <div>
+                <h2>${escapeHtml(selected.subject)}</h2>
+                <p>${escapeHtml(selected.from + " \u2022 " + selected.receivedAt)}</p>
+              </div>
             </div>
-          </div>
-          <p>${escapeHtml(selected.body)}</p>
-          <div class="hero-actions">
-            <button class="primary-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
-          </div>
+            <p>${escapeHtml(selected.body)}</p>
+            <div class="hero-actions">
+              <button class="primary-button" data-action="navigate" data-route="tasks">Сделать задачей</button>
+            </div>
+          ` : `
+            <div class="bitrix-empty-pane" style="padding:40px">
+              <h3>Выберите письмо</h3>
+              <p>Входящих сообщений пока нет.</p>
+            </div>
+          `}
         </article>
       </section>
+
+      ${state.ui.showMailComposer ? `
+        <div class="task-dialog-backdrop" data-action="close-mail-composer"></div>
+        <div class="task-dialog">
+          <form data-form="send-mail">
+            <h3 class="task-dialog-title">Новое письмо</h3>
+            <div class="task-dialog-fields">
+              <div class="field">
+                <label for="mailTo">Кому</label>
+                <input id="mailTo" name="to" placeholder="email@example.com" autofocus />
+              </div>
+              <div class="field">
+                <label for="mailSubject">Тема</label>
+                <input id="mailSubject" name="subject" placeholder="Короткая тема письма" />
+              </div>
+              <div class="field">
+                <label for="mailBody">Сообщение</label>
+                <textarea id="mailBody" name="body" rows="6" placeholder="Текст письма..."></textarea>
+              </div>
+            </div>
+            <div class="task-dialog-actions">
+              <button type="submit" class="primary-button">Отправить</button>
+              <button type="button" class="ghost-button" data-action="close-mail-composer">Отмена</button>
+            </div>
+          </form>
+        </div>
+      ` : ""}
 
     </section>
   `;
@@ -3956,6 +4049,21 @@ function renderCompany() {
     return parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.slice(0, 2).toUpperCase();
   };
 
+  // Комбинируем реальных workspace-участников + справочник persons
+  const peopleList = [
+    ...(state.members || []).map((m) => ({
+      id: m.id,
+      name: m.name,
+      role: m.jobTitle || m.role || "",
+      state: m.role === "admin" ? "Онлайн" : "В сети",
+      focus: m.email || "",
+      isMember: true,
+    })),
+    ...(state.people || []).filter((p) =>
+      !(state.members || []).some((m) => m.name === p.name)
+    ).map((p) => ({ ...p, isMember: false })),
+  ];
+
   return `
     <section class="task-shell fade-in">
 
@@ -3963,7 +4071,7 @@ function renderCompany() {
       <div class="task-header-bar">
         <div class="task-header-left">
           <h2 class="task-page-title"><span class="task-star">&#9733;</span> Сотрудники</h2>
-          <button class="task-create-btn" data-action="quick-capture">
+          <button class="task-create-btn" data-action="route-create" data-target="person" data-route="company">
             + Пригласить
           </button>
         </div>
@@ -4010,13 +4118,15 @@ function renderCompany() {
               </tr>
             </thead>
             <tbody>
-              ${state.people.map((person) => `
+              ${peopleList.length === 0 ? `
+                <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">Сотрудников пока нет. Используйте «+ Пригласить» чтобы добавить первого.</td></tr>
+              ` : peopleList.map((person) => `
                 <tr>
                   <td class="checkbox-cell"><span class="row-checkbox">&#9744;</span></td>
                   <td>
                     <span class="person-chip">
                       <span class="task-avatar-circle small">${initials(person.name)}</span>
-                      ${escapeHtml(person.name)}
+                      ${escapeHtml(person.name)}${person.isMember ? ' <span class="small-tag" style="margin-left:6px">участник</span>' : ''}
                     </span>
                   </td>
                   <td>${escapeHtml(person.role)}</td>
@@ -4031,8 +4141,8 @@ function renderCompany() {
             </tbody>
           </table>
           <div class="task-table-footer">
-            <div>ОТМЕЧЕНО: 0/${state.people.length}</div>
-            <div>ВСЕГО: ${state.people.length}</div>
+            <div>ОТМЕЧЕНО: 0/${peopleList.length}</div>
+            <div>ВСЕГО: ${peopleList.length}</div>
             <div>СТРАНИЦЫ: 1</div>
           </div>
         </div>
@@ -4076,7 +4186,89 @@ function renderWorkspace(route) {
       </section>
       ${renderQuickTaskDialog()}
       ${renderFullTaskForm()}
+      ${renderTaskDetailDialog()}
     </main>
+  `;
+}
+
+function renderTaskDetailDialog() {
+  if (!state.ui.showTaskDetail || !state.ui.selectedTaskId) return "";
+  const task = (state.tasks || []).find((t) => t.id === state.ui.selectedTaskId);
+  if (!task) return "";
+
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date();
+  const statusLabel = { active: "В работе", done: "Выполнено", overdue: "Просрочена" }[task.status] || task.status || "—";
+  const priorityLabel = { today: "Сегодня", medium: "Средний", high: "Высокий", low: "Низкий", overdue: "Срочно" }[task.priority] || task.priority || "—";
+  const projectName = task.project || "";
+  const tags = (task.tags || "").split(",").filter(Boolean);
+
+  // Получить данные исполнителя
+  let assigneeDisplay = task.assignee || "—";
+  if (task.assigneeKind === "group") assigneeDisplay = `👥 ${task.assignee}`;
+
+  return `
+    <div class="task-dialog-backdrop" data-action="close-task-detail"></div>
+    <div class="task-detail-dialog">
+      <div class="task-detail-header">
+        <h2>${escapeHtml(task.title)}</h2>
+        <button class="dialog-close" data-action="close-task-detail" aria-label="Закрыть">&times;</button>
+      </div>
+
+      <div class="task-detail-body">
+        <div class="task-detail-pills">
+          <span class="task-deadline-pill ${isOverdue ? "overdue" : "upcoming"}">
+            ${task.dueDate ? formatDueDate(task.dueDate) : (task.deadline || "без срока")}
+          </span>
+          <span class="small-tag">${escapeHtml(statusLabel)}</span>
+          <span class="small-tag">${escapeHtml(priorityLabel)}</span>
+          ${projectName ? `<span class="small-tag">📁 ${escapeHtml(projectName)}</span>` : ""}
+          ${tags.map((t) => `<span class="small-tag">#${escapeHtml(t.trim())}</span>`).join("")}
+        </div>
+
+        ${task.description ? `
+          <div class="task-detail-section">
+            <label>Описание</label>
+            <p>${escapeHtml(task.description)}</p>
+          </div>
+        ` : ""}
+
+        <div class="task-detail-fields">
+          <div class="task-detail-field">
+            <label>Постановщик</label>
+            <span>${escapeHtml(task.creator || "—")}</span>
+          </div>
+          <div class="task-detail-field">
+            <label>Исполнитель</label>
+            <span>${escapeHtml(assigneeDisplay)}</span>
+          </div>
+          ${task.startDate ? `
+            <div class="task-detail-field">
+              <label>Дата начала</label>
+              <span>${escapeHtml(formatDueDate(task.startDate))}</span>
+            </div>
+          ` : ""}
+          ${task.dueDate ? `
+            <div class="task-detail-field">
+              <label>Крайний срок</label>
+              <span>${escapeHtml(formatDueDate(task.dueDate))}</span>
+            </div>
+          ` : ""}
+          <div class="task-detail-field">
+            <label>Активность</label>
+            <span>${escapeHtml(task.activity || "—")}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="task-detail-footer">
+        ${task.chatId ? `
+          <button class="ghost-button" data-action="navigate" data-route="messenger" data-task-chat="${task.chatId}">
+            💬 Открыть чат задачи
+          </button>
+        ` : ""}
+        <button class="primary-button" data-action="close-task-detail">Закрыть</button>
+      </div>
+    </div>
   `;
 }
 
@@ -4736,6 +4928,96 @@ function handleClick(event) {
     return;
   }
 
+  if (action === "open-mail-composer") {
+    commit((draft) => { draft.ui.showMailComposer = true; });
+    return;
+  }
+  if (action === "close-mail-composer") {
+    commit((draft) => { draft.ui.showMailComposer = false; });
+    return;
+  }
+
+  if (action === "toggle-feed-like") {
+    const postId = actionTarget.dataset.postId;
+    commit((draft) => {
+      const post = (draft.feed || []).find((p) => p.id === postId);
+      if (!post) return;
+      if (post.liked) {
+        post.liked = false;
+        post.likes = Math.max(0, (post.likes || 1) - 1);
+      } else {
+        post.liked = true;
+        post.likes = (post.likes || 0) + 1;
+      }
+    });
+    return;
+  }
+
+  if (action === "toggle-feed-comments") {
+    const postId = actionTarget.dataset.postId;
+    commit((draft) => {
+      draft.ui.expandedFeedPost = draft.ui.expandedFeedPost === postId ? null : postId;
+    });
+    return;
+  }
+
+  if (action === "add-feed-comment") {
+    const postId = actionTarget.dataset.postId;
+    const inp = document.getElementById(`feedCommentInput-${postId}`);
+    const body = (inp?.value || "").trim();
+    if (!body || !postId) return;
+    commit((draft) => {
+      const post = (draft.feed || []).find((p) => p.id === postId);
+      if (!post) return;
+      if (!Array.isArray(post.comments)) post.comments = [];
+      post.comments.push({
+        id: `cmt-${Date.now()}`,
+        author: draft.profile.name || "Я",
+        body,
+        createdAt: new Date().toLocaleString("ru-RU"),
+      });
+    });
+    if (inp) inp.value = "";
+    return;
+  }
+
+  if (action === "create-task-from-post") {
+    const postId = actionTarget.dataset.postId;
+    const post = (state.feed || []).find((p) => p.id === postId);
+    if (!post) return;
+    const title = `Follow-up: ${post.title}`;
+    const description = post.body || "";
+    api.tasks.create({
+      title, description,
+      assignee: state.profile.name,
+      priority: "medium",
+      createChat: true,
+      project: "",
+    }).then((data) => {
+      commit((draft) => {
+        const t = data.task;
+        draft.tasks.unshift({
+          id: t.id, title: t.title, description: t.description || "",
+          status: t.status || "active", priority: t.priority || "medium",
+          deadline: t.deadline || "", dueDate: t.dueDate || null, startDate: t.startDate || null,
+          activity: "Сейчас",
+          assignee: t.assigneeUser?.name || t.assignee || "",
+          assigneeUserId: t.assigneeUser?.id || null,
+          creator: t.creator?.name || draft.profile.name,
+          project: "", projectId: null, projectType: "",
+          tags: "feed", bucket: "week", planBucket: "unscheduled",
+          chatId: t.chatThread?.id || null,
+          startDay: 1, endDay: 2, doneDay: 3, comments: 0,
+        });
+      });
+      alert(`Задача создана: ${title}`);
+    }).catch((err) => {
+      console.error("Create task from post error:", err);
+      alert("Не удалось создать задачу");
+    });
+    return;
+  }
+
   if (action === "set-cal-scope") {
     const nextScope = actionTarget.dataset.calScope;
     if (nextScope) {
@@ -4807,6 +5089,23 @@ function handleClick(event) {
         }
       });
     }
+    return;
+  }
+
+  if (action === "open-task-detail") {
+    const taskId = actionTarget.dataset.taskId;
+    if (!taskId) return;
+    commit((draft) => {
+      draft.ui.selectedTaskId = taskId;
+      draft.ui.showTaskDetail = true;
+    });
+    return;
+  }
+
+  if (action === "close-task-detail") {
+    commit((draft) => {
+      draft.ui.showTaskDetail = false;
+    });
     return;
   }
 
@@ -4883,6 +5182,15 @@ function handleClick(event) {
       draft.ui.showFullTaskForm = false;
       draft.ui.fileDropdownContext = null;
       draft.ui.projectDropdownContext = null;
+      // Сброс полного фарша
+      draft.ui.fullTaskChecklist = [];
+      draft.ui.fullTaskReminders = [];
+      draft.ui.fullTaskTimeTrackedMin = 0;
+      draft.ui.fullTaskTimeTrackingFrom = null;
+      draft.ui.fullTaskParentId = null;
+      draft.ui.fullTaskCoAssigneeIds = [];
+      draft.ui.fullTaskWatcherIds = [];
+      draft.ui.fullTaskLinkedIds = [];
     });
     return;
   }
@@ -4902,6 +5210,187 @@ function handleClick(event) {
       draft.ui.projectDropdownContext = draft.ui.projectDropdownContext === ctx ? null : ctx;
       draft.ui.fileDropdownContext = null;
     });
+    return;
+  }
+
+  if (action === "set-assignee-kind") {
+    const ctx = actionTarget.dataset.context;
+    const kind = actionTarget.dataset.kind; // "user" | "group"
+    commit((draft) => {
+      if (ctx === "quick") {
+        draft.ui.quickTaskAssigneeKind = kind;
+        draft.ui.quickTaskAssigneeId = null;
+      } else {
+        draft.ui.fullTaskAssigneeKind = kind;
+        draft.ui.fullTaskAssigneeId = null;
+      }
+    });
+    return;
+  }
+
+  // ── Полный фарш — handlers для full task form ──
+  if (action === "add-checklist-item") {
+    const inp = document.getElementById("checklistNewItem");
+    const text = (inp?.value || "").trim();
+    if (!text) return;
+    commit((draft) => {
+      draft.ui.fullTaskChecklist = [
+        ...(draft.ui.fullTaskChecklist || []),
+        { id: `cl-${Date.now()}`, text, done: false },
+      ];
+    });
+    if (inp) inp.value = "";
+    return;
+  }
+  if (action === "add-reminder-item") {
+    const atInp = document.getElementById("reminderNewAt");
+    const msgInp = document.getElementById("reminderNewMsg");
+    const at = (atInp?.value || "").trim();
+    if (!at) return;
+    const message = (msgInp?.value || "").trim();
+    commit((draft) => {
+      draft.ui.fullTaskReminders = [
+        ...(draft.ui.fullTaskReminders || []),
+        { id: `rm-${Date.now()}`, at, message },
+      ];
+    });
+    if (atInp) atInp.value = "";
+    if (msgInp) msgInp.value = "";
+    return;
+  }
+  if (action === "toggle-checklist") {
+    const itemId = actionTarget.dataset.itemId;
+    commit((draft) => {
+      const list = draft.ui.fullTaskChecklist || [];
+      const it = list.find((x) => x.id === itemId);
+      if (it) it.done = !it.done;
+    });
+    return;
+  }
+  if (action === "remove-checklist") {
+    const itemId = actionTarget.dataset.itemId;
+    commit((draft) => {
+      draft.ui.fullTaskChecklist = (draft.ui.fullTaskChecklist || []).filter((x) => x.id !== itemId);
+    });
+    return;
+  }
+  if (action === "remove-reminder") {
+    const itemId = actionTarget.dataset.itemId;
+    commit((draft) => {
+      draft.ui.fullTaskReminders = (draft.ui.fullTaskReminders || []).filter((x) => x.id !== itemId);
+    });
+    return;
+  }
+  if (action === "toggle-co-assignee") {
+    const uid = actionTarget.dataset.userId;
+    commit((draft) => {
+      const list = draft.ui.fullTaskCoAssigneeIds || [];
+      if (list.includes(uid)) draft.ui.fullTaskCoAssigneeIds = list.filter((x) => x !== uid);
+      else draft.ui.fullTaskCoAssigneeIds = [...list, uid];
+    });
+    return;
+  }
+  if (action === "toggle-watcher") {
+    const uid = actionTarget.dataset.userId;
+    commit((draft) => {
+      const list = draft.ui.fullTaskWatcherIds || [];
+      if (list.includes(uid)) draft.ui.fullTaskWatcherIds = list.filter((x) => x !== uid);
+      else draft.ui.fullTaskWatcherIds = [...list, uid];
+    });
+    return;
+  }
+  if (action === "toggle-linked-task") {
+    const tid = actionTarget.dataset.taskId;
+    commit((draft) => {
+      const list = draft.ui.fullTaskLinkedIds || [];
+      if (list.includes(tid)) draft.ui.fullTaskLinkedIds = list.filter((x) => x !== tid);
+      else draft.ui.fullTaskLinkedIds = [...list, tid];
+    });
+    return;
+  }
+  if (action === "start-time-tracking") {
+    commit((draft) => {
+      draft.ui.fullTaskTimeTrackingFrom = new Date().toISOString();
+    });
+    return;
+  }
+  if (action === "stop-time-tracking") {
+    commit((draft) => {
+      if (draft.ui.fullTaskTimeTrackingFrom) {
+        const elapsedMs = Date.now() - new Date(draft.ui.fullTaskTimeTrackingFrom).getTime();
+        const addMin = Math.max(1, Math.round(elapsedMs / 60000));
+        draft.ui.fullTaskTimeTrackedMin = (draft.ui.fullTaskTimeTrackedMin || 0) + addMin;
+        draft.ui.fullTaskTimeTrackingFrom = null;
+      }
+    });
+    return;
+  }
+  if (action === "reset-time-tracking") {
+    commit((draft) => {
+      draft.ui.fullTaskTimeTrackedMin = 0;
+      draft.ui.fullTaskTimeTrackingFrom = null;
+    });
+    return;
+  }
+
+  // ── Шаблоны задач (localStorage) ──
+  if (action === "toggle-templates-dropdown") {
+    commit((draft) => { draft.ui.showTaskTemplates = !draft.ui.showTaskTemplates; });
+    return;
+  }
+  if (action === "save-task-template") {
+    const form = document.querySelector('form[data-form="full-add-task"]');
+    if (!form) return;
+    const title = form.querySelector('[name="title"]')?.value?.trim();
+    if (!title) { alert("Введите название задачи для сохранения шаблона"); return; }
+    const description = form.querySelector('[name="description"]')?.value?.trim() || "";
+    const tpl = {
+      name: title,
+      title,
+      description,
+      priority: "today",
+      checklist: state.ui.fullTaskChecklist || [],
+      reminders: state.ui.fullTaskReminders || [],
+      coAssigneeUserIds: state.ui.fullTaskCoAssigneeIds || [],
+      watcherUserIds: state.ui.fullTaskWatcherIds || [],
+      linkedTaskIds: state.ui.fullTaskLinkedIds || [],
+    };
+    const existing = JSON.parse(localStorage.getItem('linkora-task-templates') || '[]');
+    existing.push(tpl);
+    localStorage.setItem('linkora-task-templates', JSON.stringify(existing));
+    commit((draft) => { draft.ui.showTaskTemplates = false; });
+    alert(`Шаблон "${title}" сохранён`);
+    return;
+  }
+  if (action === "apply-task-template") {
+    const idx = parseInt(actionTarget.dataset.templateIndex, 10);
+    const templates = JSON.parse(localStorage.getItem('linkora-task-templates') || '[]');
+    const tpl = templates[idx];
+    if (!tpl) return;
+    // заполняем поля формы
+    const form = document.querySelector('form[data-form="full-add-task"]');
+    if (form) {
+      const titleInput = form.querySelector('[name="title"]');
+      const descInput = form.querySelector('[name="description"]');
+      if (titleInput) titleInput.value = tpl.title || "";
+      if (descInput) descInput.value = tpl.description || "";
+    }
+    commit((draft) => {
+      draft.ui.fullTaskChecklist = (tpl.checklist || []).map((x) => ({ ...x, id: `cl-${Date.now()}-${Math.random()}` }));
+      draft.ui.fullTaskReminders = (tpl.reminders || []).map((x) => ({ ...x, id: `rm-${Date.now()}-${Math.random()}` }));
+      draft.ui.fullTaskCoAssigneeIds = tpl.coAssigneeUserIds || [];
+      draft.ui.fullTaskWatcherIds = tpl.watcherUserIds || [];
+      draft.ui.fullTaskLinkedIds = tpl.linkedTaskIds || [];
+      draft.ui.showTaskTemplates = false;
+    });
+    return;
+  }
+  if (action === "delete-task-template") {
+    const idx = parseInt(actionTarget.dataset.templateIndex, 10);
+    const templates = JSON.parse(localStorage.getItem('linkora-task-templates') || '[]');
+    templates.splice(idx, 1);
+    localStorage.setItem('linkora-task-templates', JSON.stringify(templates));
+    commit((draft) => { /* trigger re-render */ });
     return;
   }
 
@@ -5149,6 +5638,13 @@ function handleClick(event) {
 }
 
 function handleSearch(event) {
+  // Set parent task select (full task form)
+  const parentSelect = event.target.closest('[data-action="set-parent-task"]');
+  if (parentSelect) {
+    commit((draft) => { draft.ui.fullTaskParentId = parentSelect.value || null; });
+    return;
+  }
+
   // Handle group task search
   const groupSearchInput = event.target.closest('[data-action="group-task-search"]');
   if (groupSearchInput) {
@@ -5204,6 +5700,29 @@ function handleSubmit(event) {
 
   event.preventDefault();
   const formData = new FormData(form);
+
+  if (form.dataset.form === "send-mail") {
+    const to = String(formData.get("to") || "").trim();
+    const subject = String(formData.get("subject") || "").trim();
+    const body = String(formData.get("body") || "").trim();
+    if (!to || !subject) { alert("Заполните Кому и Тему"); return; }
+    // Локально добавим отправленное письмо (backend API не имеет send endpoint — это демо)
+    commit((draft) => {
+      if (!Array.isArray(draft.mail)) draft.mail = [];
+      draft.mail.unshift({
+        id: `mail-${Date.now()}`,
+        from: to,
+        subject: `[Отправлено] ${subject}`,
+        preview: body.substring(0, 100),
+        body,
+        receivedAt: new Date().toLocaleString("ru-RU"),
+        unread: false,
+      });
+      draft.ui.showMailComposer = false;
+    });
+    alert(`Письмо отправлено: ${subject}`);
+    return;
+  }
 
   if (form.dataset.form === "create-group") {
     const title = String(formData.get("title") || "").trim();
@@ -5420,15 +5939,26 @@ function handleSubmit(event) {
     const title = String(formData.get("title") || "").trim();
     if (!title) return;
     const description = String(formData.get("description") || "").trim();
-    const assignee = String(formData.get("assignee") || state.profile.name);
+    const assigneeUserId = String(formData.get("assigneeUserId") || "") || null;
+    const assigneeGroupId = String(formData.get("assigneeGroupId") || "") || null;
     const dueDate = String(formData.get("dueDate") || "");
     const startDate = String(formData.get("startDate") || "");
     const deadline = dueDate ? formatDueDate(dueDate) : "без даты";
     const isQuick = form.dataset.form === "quick-add-task";
     const projectId = isQuick ? state.ui.quickTaskProject : state.ui.fullTaskProject;
     const projectGroup = projectId ? state.groups.find(g => g.id === projectId) : null;
-    const projectName = projectGroup ? projectGroup.title : "Внутрянка Консалт";
+    const projectName = projectGroup ? projectGroup.title : "";
     const files = isQuick ? [...state.ui.quickTaskFiles] : [...state.ui.fullTaskFiles];
+
+    // Resolve display name for assignee
+    let assignee = state.profile.name;
+    if (assigneeGroupId) {
+      const g = state.groups.find(x => x.id === assigneeGroupId);
+      if (g) assignee = g.title;
+    } else if (assigneeUserId) {
+      const p = state.people.find(x => x.id === assigneeUserId);
+      if (p) assignee = p.name;
+    }
 
     if (startDate && dueDate && new Date(startDate) > new Date(dueDate)) {
       alert("Дата начала не может быть позже крайнего срока");
@@ -5440,6 +5970,9 @@ function handleSubmit(event) {
       title,
       description,
       assignee,
+      assigneeUserId: assigneeUserId || undefined,
+      assigneeGroupId: assigneeGroupId || undefined,
+      groupId: projectId || undefined,
       dueDate: dueDate || undefined,
       startDate: startDate || undefined,
       deadline,
@@ -5449,9 +5982,22 @@ function handleSubmit(event) {
       files: files.map(f => ({ filename: f, source: "upload" })),
     };
 
-    // If a project group is selected, create in that group instead
-    const createPromise = projectId
-      ? api.groups.createTask(projectId, { title, description, priority: "medium", dueDate: dueDate || undefined, startDate: startDate || undefined, deadline, assignee })
+    // Полный фарш — только для full task form
+    if (!isQuick) {
+      const cl = state.ui.fullTaskChecklist || [];
+      const rm = state.ui.fullTaskReminders || [];
+      if (cl.length) createPayload.checklist = cl;
+      if (rm.length) createPayload.reminders = rm;
+      if (state.ui.fullTaskTimeTrackedMin) createPayload.timeTrackedMin = state.ui.fullTaskTimeTrackedMin;
+      if (state.ui.fullTaskParentId) createPayload.parentTaskId = state.ui.fullTaskParentId;
+      if ((state.ui.fullTaskCoAssigneeIds || []).length) createPayload.coAssigneeUserIds = state.ui.fullTaskCoAssigneeIds;
+      if ((state.ui.fullTaskWatcherIds || []).length) createPayload.watcherUserIds = state.ui.fullTaskWatcherIds;
+      if ((state.ui.fullTaskLinkedIds || []).length) createPayload.linkedTaskIds = state.ui.fullTaskLinkedIds;
+    }
+
+    // If a project group is selected AND no assignee-group, route через group endpoint
+    const createPromise = (projectId && !assigneeGroupId)
+      ? api.groups.createTask(projectId, { title, description, priority: "medium", dueDate: dueDate || undefined, startDate: startDate || undefined, deadline, assignee, assigneeUserId: assigneeUserId || undefined })
       : api.tasks.create(createPayload);
 
     createPromise.then((data) => {
@@ -5509,6 +6055,14 @@ function handleSubmit(event) {
         draft.ui.quickTaskProject = null;
         draft.ui.fullTaskFiles = [];
         draft.ui.fullTaskProject = null;
+        draft.ui.fullTaskChecklist = [];
+        draft.ui.fullTaskReminders = [];
+        draft.ui.fullTaskTimeTrackedMin = 0;
+        draft.ui.fullTaskTimeTrackingFrom = null;
+        draft.ui.fullTaskParentId = null;
+        draft.ui.fullTaskCoAssigneeIds = [];
+        draft.ui.fullTaskWatcherIds = [];
+        draft.ui.fullTaskLinkedIds = [];
         draft.metrics.openTasks = draft.tasks.filter((t) => t.status !== "done").length;
       });
     }).catch((err) => {
@@ -5605,6 +6159,7 @@ export default function LegacyWorkspace() {
           if (apiData.docs) draft.docs = apiData.docs;
           if (apiData.groups) draft.groups = apiData.groups;
           if (apiData.people) draft.people = apiData.people;
+          if (apiData.members) draft.members = apiData.members;
           if (apiData.metrics) draft.metrics = apiData.metrics;
           state = draft;
           saveState(draft);

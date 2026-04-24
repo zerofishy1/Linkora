@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ═══════════════════════════════════════════
@@ -27,6 +28,9 @@ model User {
   createdInviteTokens  WorkspaceInviteToken[]
   tasks                Task[]
   createdTasks         Task[]        @relation("TaskCreator")
+  assignedTasks        Task[]        @relation("TaskAssignee")
+  coAssignedTasks      TaskCoAssignee[]
+  watchedTasks         TaskWatcher[]
   events               Event[]
   feedPosts            FeedPost[]
   chatThreads          ChatThread[]
@@ -136,6 +140,26 @@ model Task {
   creatorId   String
   creator     User      @relation("TaskCreator", fields: [creatorId], references: [id])
   assignee    String    @default("")
+
+  assigneeUserId  String?
+  assigneeUser    User?   @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  assigneeGroupId String?
+  assigneeGroup   Group?  @relation("TaskAssigneeGroup", fields: [assigneeGroupId], references: [id], onDelete: SetNull)
+
+  // ── Расширенные поля (Полный фарш) ──
+  checklist       String   @default("[]")   // JSON: [{id, text, done}]
+  reminders       String   @default("[]")   // JSON: [{id, at, message}]
+  timeTrackedMin  Int      @default(0)      // минуты
+  timeTrackingFrom String?                  // ISO timestamp если таймер запущен
+
+  parentTaskId String?
+  parentTask   Task?   @relation("TaskHierarchy", fields: [parentTaskId], references: [id], onDelete: SetNull)
+  subtasks     Task[]  @relation("TaskHierarchy")
+
+  coAssignees  TaskCoAssignee[]
+  watchers     TaskWatcher[]
+  linksFrom    TaskLink[] @relation("LinksFrom")
+  linksTo      TaskLink[] @relation("LinksTo")
 
   groupId     String?
   group       Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
@@ -312,6 +336,7 @@ model Group {
   members GroupMember[]
   posts   GroupPost[]
   tasks   Task[]
+  assignedTasks Task[] @relation("TaskAssigneeGroup")
   events  GroupEvent[]
   files   GroupFile[]
 
@@ -432,4 +457,42 @@ model UploadedFile {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+// ═══════════════════════════════════════════
+//  Task relations — co-assignees, watchers, links
+// ═══════════════════════════════════════════
+
+model TaskCoAssignee {
+  id      String @id @default(uuid())
+  taskId  String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  @@unique([taskId, userId])
+}
+
+model TaskWatcher {
+  id      String @id @default(uuid())
+  taskId  String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  @@unique([taskId, userId])
+}
+
+model TaskLink {
+  id     String @id @default(uuid())
+  fromId String
+  from   Task   @relation("LinksFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId   String
+  to     Task   @relation("LinksTo", fields: [toId], references: [id], onDelete: Cascade)
+  kind   String @default("related")  // related | blocks | duplicates
+
+  createdAt DateTime @default(now())
+  @@unique([fromId, toId])
 }

@@ -203,11 +203,21 @@ export const tasks = {
     dueDate?: string;
     startDate?: string;
     assignee?: string;
+    assigneeUserId?: string | null;
+    assigneeGroupId?: string | null;
+    groupId?: string | null;
     project?: string;
     priority?: string;
     status?: string;
     createChat?: boolean;
     files?: Array<{ filename: string; source: string }>;
+    checklist?: Array<{ id: string; text: string; done: boolean }>;
+    reminders?: Array<{ id: string; at: string; message: string }>;
+    timeTrackedMin?: number;
+    parentTaskId?: string | null;
+    coAssigneeUserIds?: string[];
+    watcherUserIds?: string[];
+    linkedTaskIds?: string[];
   }) {
     return request<{ task: any }>("/tasks", {
       method: "POST",
@@ -224,8 +234,18 @@ export const tasks = {
     dueDate: string | null;
     startDate: string | null;
     assignee: string;
+    assigneeUserId: string | null;
+    assigneeGroupId: string | null;
+    groupId: string | null;
     project: string;
     bucket: string;
+    checklist: Array<{ id: string; text: string; done: boolean }>;
+    reminders: Array<{ id: string; at: string; message: string }>;
+    timeTrackedMin: number;
+    parentTaskId: string | null;
+    coAssigneeUserIds: string[];
+    watcherUserIds: string[];
+    linkedTaskIds: string[];
   }>) {
     return request<{ task: any }>(`/tasks/${id}`, {
       method: "PATCH",
@@ -235,6 +255,14 @@ export const tasks = {
 
   async remove(id: string) {
     return request<{ ok: boolean }>(`/tasks/${id}`, { method: "DELETE" });
+  },
+
+  async timeStart(id: string) {
+    return request<{ task: any }>(`/tasks/${id}/time-start`, { method: "POST" });
+  },
+
+  async timeStop(id: string) {
+    return request<{ task: any; addedMinutes: number }>(`/tasks/${id}/time-stop`, { method: "POST" });
   },
 
   async calendarMonth(month: string) {
@@ -470,7 +498,7 @@ export const groups = {
     return request<{ tasks: any[] }>(`/groups/${groupId}/tasks${query}`);
   },
 
-  async createTask(groupId: string, data: { title: string; description?: string; priority?: string; deadline?: string; dueDate?: string; startDate?: string; assignee?: string; kanbanStage?: string }) {
+  async createTask(groupId: string, data: { title: string; description?: string; priority?: string; deadline?: string; dueDate?: string; startDate?: string; assignee?: string; assigneeUserId?: string | null; assigneeGroupId?: string | null; kanbanStage?: string }) {
     return request<{ task: any }>(`/groups/${groupId}/tasks`, {
       method: "POST",
       body: JSON.stringify(data),

@@ -3666,35 +3666,95 @@ body::after {
    ═══════════════════════════════════════════════════════ */
 
 :root {
-  --bg: #f6f5f9;
-  --bg-deep: #eeedf3;
+  /* ── Небесно-фиолетовый фон ── */
+  --bg: #e6e0f5;
+  --bg-deep: #d9d1ee;
+  --bg-wash: linear-gradient(135deg, #e8e2f7 0%, #ddd4f0 40%, #cec1e8 100%);
+
   --panel: #ffffff;
   --panel-strong: #ffffff;
-  --panel-border: rgba(100, 70, 160, 0.08);
+  --panel-border: rgba(120, 80, 200, 0.08);
+  --panel-hover: #faf8ff;
+
   --text: #1e1a2b;
   --muted: #6b6580;
   --subtle: #9590a6;
+
   --accent: #8b5cf6;
   --accent-strong: #7c3aed;
+  --accent-light: #a78bfa;
   --accent-soft: rgba(139, 92, 246, 0.08);
+  --accent-glow: rgba(139, 92, 246, 0.12);
+
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --shadow: 0 1px 3px rgba(80, 50, 130, 0.06), 0 1px 2px rgba(80, 50, 130, 0.04);
-  --shadow-lg: 0 4px 12px rgba(80, 50, 130, 0.08);
+
+  --shadow: 0 1px 3px rgba(100, 60, 180, 0.07), 0 1px 2px rgba(100, 60, 180, 0.05);
+  --shadow-md: 0 4px 12px rgba(100, 60, 180, 0.08);
+  --shadow-lg: 0 8px 24px rgba(100, 60, 180, 0.12);
+  --shadow-card: 0 2px 8px rgba(100, 60, 180, 0.08), 0 0 0 1px rgba(120, 80, 200, 0.05);
+
   --radius-card: 12px;
   --radius-btn: 8px;
   --radius-tab: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
 }
 
 body {
-  background: var(--bg);
+  background: var(--bg-wash);
+  background-attachment: fixed;
 }
 
 body::before,
 body::after {
   opacity: 0;
   display: none;
+}
+
+/* ── App shell — seamless layout (без разрыва sidebar↔topbar) ── */
+.app-shell {
+  gap: 0;
+  padding: 0;
+}
+
+.content-shell {
+  gap: 0;
+}
+
+/* ── Topbar: portal-bar растягивается на всю ширину (убирает 89px зазор) ── */
+.topbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  min-height: auto;
+  backdrop-filter: none;
+}
+
+/* ── Thread list — чаты фиксированной высоты, не растягиваются ── */
+.bitrix-thread-list {
+  min-height: 0;
+  overflow: auto;
+  align-content: start;
+  grid-auto-rows: min-content;
+}
+
+/* ── Workspace — прозрачный чтобы фон body был виден ── */
+.workspace {
+  background: transparent;
+  padding: var(--space-md);
 }
 
 /* ── Sidebar ── */
@@ -5884,4 +5944,158 @@ textarea::placeholder {
   .gd-kanban-board { grid-template-columns: 1fr; }
   .gd-deadlines-board { grid-template-columns: 1fr; }
   .gd-more-links { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Task Full Form — Полный фарш (checklist, reminders, relations, time)
+   ═══════════════════════════════════════════════════════ */
+
+.task-checklist-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.task-checklist-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--accent-soft); }
+.task-checklist-check { border: 0; background: transparent; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; line-height: 1; color: var(--muted); }
+.task-checklist-check.is-done { color: var(--accent); }
+.task-checklist-text { flex: 1; font-size: 14px; color: var(--text); }
+.task-checklist-text.is-done { text-decoration: line-through; color: var(--muted); }
+.task-checklist-remove { border: 0; background: transparent; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; }
+.task-checklist-remove:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+.task-checklist-add, .task-reminder-add { display: flex; gap: 6px; }
+.task-checklist-add input { flex: 1; }
+.task-reminder-add input[name="at"] { flex: 0 0 200px; }
+.task-reminder-add input[name="message"] { flex: 1; }
+
+.task-people-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 0; }
+.task-people-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--panel-border); background: var(--panel); color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.task-people-chip:hover { background: var(--accent-soft); }
+.task-people-chip.is-active { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+
+.task-reminder-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.task-reminder-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--accent-soft); border-radius: 8px; font-size: 13px; }
+.task-reminder-time { color: var(--accent-strong); font-weight: 500; }
+.task-reminder-msg { flex: 1; color: var(--muted); }
+
+.task-parent-picker select { width: 100%; }
+
+.task-planning { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
+.task-planning-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.task-planning-row span:last-child { color: var(--text); font-weight: 500; }
+.task-section-hint { font-size: 12px; color: var(--subtle); margin: 6px 0 0; }
+
+.task-time-tracker { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.task-time-value { font-size: 14px; color: var(--text); }
+.task-time-value strong { color: var(--accent-strong); }
+.task-time-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.task-template-dropdown { position: absolute; right: 0; bottom: 100%; margin-bottom: 8px; background: var(--panel); border: 1px solid var(--panel-border); border-radius: 8px; padding: 6px; box-shadow: var(--shadow-md); min-width: 240px; max-height: 300px; overflow-y: auto; z-index: 10; }
+.task-template-item { display: flex; align-items: center; gap: 4px; padding: 2px; }
+.task-template-apply { flex: 1; text-align: left; padding: 6px 10px; border: 0; background: transparent; cursor: pointer; border-radius: 6px; color: var(--text); font-size: 13px; }
+.task-template-apply:hover { background: var(--accent-soft); }
+
+.task-dialog-actions { position: relative; display: flex; gap: 8px; flex-wrap: wrap; }
+
+.section-badge { display: inline-block; margin-left: 6px; padding: 1px 8px; background: var(--accent); color: var(--panel); border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+/* ═══════════════════════════════════════════════════════
+   Task Detail Dialog — просмотр задачи из календаря и списков
+   ═══════════════════════════════════════════════════════ */
+.task-detail-dialog {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 32px));
+  max-height: 85vh;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+.task-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.task-detail-header h2 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--text);
+  flex: 1;
+  padding-right: 12px;
+}
+.task-detail-header .dialog-close {
+  border: 0;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  line-height: 1;
+}
+.task-detail-header .dialog-close:hover {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.task-detail-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.task-detail-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.task-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.task-detail-section label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.task-detail-section p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.task-detail-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--panel-border);
+}
+.task-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.task-detail-field label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.task-detail-field span {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+.task-detail-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--panel-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

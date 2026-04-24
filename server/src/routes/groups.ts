@@ -519,8 +519,11 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
       res.status(403).json({ error: "Только участники могут создавать задачи" }); return;
     }
 
-    const { title, description, priority, deadline, dueDate, startDate, assignee, kanbanStage } = req.body;
+    const { title, description, priority, deadline, dueDate, startDate, assignee, assigneeUserId, assigneeGroupId, kanbanStage } = req.body;
     if (!title?.trim()) { res.status(400).json({ error: "Название задачи обязательно" }); return; }
+    if (assigneeUserId && assigneeGroupId) {
+      res.status(400).json({ error: "Исполнитель — либо человек, либо группа" }); return;
+    }
 
     // Validate dates
     if (dueDate && startDate && new Date(startDate) > new Date(dueDate)) {
@@ -529,6 +532,29 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
 
     const userId = req.user!.userId;
     const wsId = req.user!.workspaceId!;
+
+    // Resolve assignee
+    let assigneeName = assignee || "";
+    let validAssigneeUserId: string | null = null;
+    let validAssigneeGroupId: string | null = null;
+    if (assigneeUserId) {
+      const u = await prisma.user.findFirst({
+        where: { id: assigneeUserId, memberships: { some: { workspaceId: wsId } } },
+        select: { id: true, name: true },
+      });
+      if (!u) { res.status(400).json({ error: "Исполнитель не найден" }); return; }
+      validAssigneeUserId = u.id;
+      assigneeName = u.name;
+    }
+    if (assigneeGroupId) {
+      const g = await prisma.group.findFirst({
+        where: { id: assigneeGroupId, workspaceId: wsId },
+        select: { id: true, title: true },
+      });
+      if (!g) { res.status(400).json({ error: "Группа-исполнитель не найдена" }); return; }
+      validAssigneeGroupId = g.id;
+      if (!assigneeName) assigneeName = g.title;
+    }
 
     // Create chat thread for the task
     const chatThread = await prisma.chatThread.create({
@@ -548,7 +574,9 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
         deadline: deadline || "",
         dueDate: dueDate || null,
         startDate: startDate || null,
-        assignee: assignee || "",
+        assignee: assigneeName,
+        assigneeUserId: validAssigneeUserId,
+        assigneeGroupId: validAssigneeGroupId,
         kanbanStage: kanbanStage || "new",
         ownerId: userId,
         creatorId: userId,
@@ -559,6 +587,8 @@ router.post("/:id/tasks", requireRole("admin", "member"), async (req: Request, r
       include: {
         owner: { select: { id: true, name: true, initials: true, avatarUrl: true } },
         creator: { select: { id: true, name: true, initials: true } },
+        assigneeUser: { select: { id: true, name: true, initials: true } },
+        assigneeGroup: { select: { id: true, title: true } },
       },
     });
 
